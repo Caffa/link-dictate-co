@@ -24,7 +24,7 @@ describe('HandyClient integration with bun.serve', () => {
 				lastRequest = {
 					method: request.method,
 					path: new URL(request.url).pathname,
-					headers: Object.fromEntries(request.headers.entries()),
+					headers: Object.fromEntries(request.headers as unknown as Iterable<[string, string]>),
 					body,
 				};
 
@@ -76,7 +76,7 @@ describe('HandyClient integration with bun.serve', () => {
 	});
 
 	it('sends POST /insert with Bearer header and exact body', async () => {
-		const client = new HandyClient(server.port, 'testsecret', mockTransport);
+		const client = new HandyClient(server.port!, 'testsecret', mockTransport);
 		// Replace transport with one that hits the real bun server for this test.
 		client.transport = async (req) => {
 			const response = await fetch(req.url, {
@@ -104,7 +104,7 @@ describe('HandyClient integration with bun.serve', () => {
 	});
 
 	it('returns not_recording on 409', async () => {
-		const client = new HandyClient(server.port, 'testsecret', async (req) => {
+		const client = new HandyClient(server.port!, 'testsecret', async (req) => {
 			const response = await fetch(req.url, {
 				method: req.method,
 				headers: req.headers,
@@ -124,7 +124,7 @@ describe('HandyClient integration with bun.serve', () => {
 	});
 
 	it('returns unauthorized on wrong secret', async () => {
-		const client = new HandyClient(server.port, 'wrongsecret', async (req) => {
+		const client = new HandyClient(server.port!, 'wrongsecret', async (req) => {
 			const response = await fetch(req.url, {
 				method: req.method,
 				headers: req.headers,
@@ -137,7 +137,7 @@ describe('HandyClient integration with bun.serve', () => {
 	});
 
 	it('returns recording state and requires auth', async () => {
-		const client = new HandyClient(server.port, 'testsecret', async (req) => {
+		const client = new HandyClient(server.port!, 'testsecret', async (req) => {
 			const response = await fetch(req.url, {
 				method: req.method,
 				headers: req.headers,
@@ -150,7 +150,7 @@ describe('HandyClient integration with bun.serve', () => {
 	});
 
 	it('health requires no auth', async () => {
-		const client = new HandyClient(server.port, '', async (req) => {
+		const client = new HandyClient(server.port!, '', async (req) => {
 			const response = await fetch(req.url, {
 				method: req.method,
 				headers: req.headers,
