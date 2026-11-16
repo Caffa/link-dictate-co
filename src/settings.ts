@@ -69,6 +69,50 @@ export class LinkDictateCoSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName('Panel sections')
+			.setHeading();
+
+		const toggles: Array<{
+			key: keyof Pick<
+				LinkDictateCoSettings,
+				'showCurrentNote' | 'showSameFolder' | 'showVaultWide'
+			>;
+			name: string;
+			desc: string;
+		}> = [
+			{
+				key: 'showCurrentNote',
+				name: 'Show current-note links',
+				desc: 'Links on the current note',
+			},
+			{
+				key: 'showSameFolder',
+				name: 'Show same-folder links',
+				desc: 'Links used in the same folder',
+			},
+			{
+				key: 'showVaultWide',
+				name: 'Show vault-wide links',
+				desc: 'Top links used across the vault',
+			},
+		];
+
+		for (const { key, name, desc } of toggles) {
+			new Setting(containerEl)
+				.setName(name)
+				.setDesc(desc)
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings[key])
+						.onChange(async (value) => {
+							this.plugin.settings[key] = value;
+							await this.plugin.saveData(this.plugin.settings);
+							this.plugin.refreshView();
+						}),
+				);
+		}
+
+		new Setting(containerEl)
 			.setName('Test connection')
 			.setDesc('Ping Handy on the configured port.')
 			.addButton((button) =>

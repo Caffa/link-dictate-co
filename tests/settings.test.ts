@@ -17,6 +17,9 @@ describe('mergeSettings', () => {
 			port: 99999,
 			secret: 'abc',
 			insertStyle: 'wikilink',
+			showCurrentNote: true,
+			showSameFolder: true,
+			showVaultWide: true,
 		});
 		expect(result).not.toHaveProperty('extra');
 	});
@@ -29,5 +32,32 @@ describe('mergeSettings', () => {
 
 	it('coerces valid port strings', () => {
 		expect(mergeSettings({ port: '12345' }).port).toBe(12345);
+	});
+
+	describe('panel section toggles', () => {
+		it('defaults all panel toggles to true', () => {
+			const result = mergeSettings({});
+			expect(result.showCurrentNote).toBe(true);
+			expect(result.showSameFolder).toBe(true);
+			expect(result.showVaultWide).toBe(true);
+		});
+
+		it('preserves valid boolean panel toggles', () => {
+			const result = mergeSettings({
+				showCurrentNote: false,
+				showSameFolder: false,
+				showVaultWide: false,
+			});
+			expect(result.showCurrentNote).toBe(false);
+			expect(result.showSameFolder).toBe(false);
+			expect(result.showVaultWide).toBe(false);
+		});
+
+		it('coerces non-boolean panel toggles to true', () => {
+			expect(mergeSettings({ showCurrentNote: 'yes' }).showCurrentNote).toBe(true);
+			expect(mergeSettings({ showSameFolder: 1 }).showSameFolder).toBe(true);
+			expect(mergeSettings({ showVaultWide: null }).showVaultWide).toBe(true);
+			expect(mergeSettings({ showCurrentNote: undefined }).showCurrentNote).toBe(true);
+		});
 	});
 });

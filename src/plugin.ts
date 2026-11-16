@@ -62,7 +62,7 @@ export default class LinkDictateCoPlugin extends Plugin {
 		}, REFRESH_DEBOUNCE_MS);
 	}
 
-	private refreshView(currentOnly = false): void {
+	refreshView(currentOnly = false): void {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_DICTATE_CO);
 		for (const leaf of leaves) {
 			const view = leaf.view;
