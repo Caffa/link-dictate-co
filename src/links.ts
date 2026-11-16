@@ -44,7 +44,7 @@ export function sameFolderLinks(
 	const counts = new Map<string, number>();
 
 	for (const [path, source] of Object.entries(resolved)) {
-		if (directoryOf(path) !== folder) {
+		if (path === sourcePath || directoryOf(path) !== folder) {
 			continue;
 		}
 		for (const [target, count] of Object.entries(source)) {

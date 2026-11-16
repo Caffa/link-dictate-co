@@ -51,26 +51,37 @@ describe('currentNoteLinks', () => {
 });
 
 describe('sameFolderLinks', () => {
-	it('aggregates links across sources in the same directory', () => {
+	it('aggregates links from folder mates, excluding the source note', () => {
 		const resolved = {
 			'folder/a.md': { Alpha: 1, Beta: 2 },
 			'folder/b.md': { Alpha: 2, Gamma: 1 },
 			'other/c.md': { Alpha: 5, Delta: 1 },
 		};
 		expect(sameFolderLinks(resolved, 'folder/a.md', 10)).toEqual([
-			{ target: 'Alpha', count: 3 },
-			{ target: 'Beta', count: 2 },
+			{ target: 'Alpha', count: 2 },
 			{ target: 'Gamma', count: 1 },
+		]);
+	});
+
+	it('excludes only the source note while summing folder mates', () => {
+		const resolved = {
+			'folder/a.md': { Self: 3 },
+			'folder/b.md': { Mate: 2 },
+			'folder/c.md': { Mate: 4 },
+		};
+		expect(sameFolderLinks(resolved, 'folder/a.md', 10)).toEqual([
+			{ target: 'Mate', count: 6 },
 		]);
 	});
 
 	it('matches exact directory, not prefix', () => {
 		const resolved = {
 			'folder/a.md': { Alpha: 1 },
-			'folder-sub/a.md': { Alpha: 5 },
+			'folder/b.md': { Alpha: 5 },
+			'folder-sub/a.md': { Alpha: 10 },
 		};
 		expect(sameFolderLinks(resolved, 'folder/a.md', 10)).toEqual([
-			{ target: 'Alpha', count: 1 },
+			{ target: 'Alpha', count: 5 },
 		]);
 	});
 
@@ -81,18 +92,20 @@ describe('sameFolderLinks', () => {
 			'folder/nested.md': { Alpha: 10 },
 		};
 		expect(sameFolderLinks(resolved, 'root.md', 10)).toEqual([
-			{ target: 'Alpha', count: 6 },
+			{ target: 'Alpha', count: 5 },
 		]);
 	});
 
 	it('sorts by count descending with alphabetical tiebreak', () => {
 		const resolved = {
 			'folder/a.md': { Zeta: 1, Apple: 1, Beta: 2 },
-			'folder/b.md': { Apple: 1 },
+			'folder/b.md': { Zeta: 1, Apple: 2, Beta: 2 },
+			'folder/c.md': { Beta: 1, Delta: 3 },
 		};
 		expect(sameFolderLinks(resolved, 'folder/a.md', 10)).toEqual([
+			{ target: 'Beta', count: 3 },
+			{ target: 'Delta', count: 3 },
 			{ target: 'Apple', count: 2 },
-			{ target: 'Beta', count: 2 },
 			{ target: 'Zeta', count: 1 },
 		]);
 	});
@@ -100,6 +113,7 @@ describe('sameFolderLinks', () => {
 	it('respects the limit', () => {
 		const resolved = {
 			'folder/a.md': { One: 1, Two: 1, Three: 1, Four: 1 },
+			'folder/b.md': { One: 4, Two: 3, Three: 2, Four: 1 },
 		};
 		expect(sameFolderLinks(resolved, 'folder/a.md', 2)).toHaveLength(2);
 	});
