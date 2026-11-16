@@ -1,0 +1,80 @@
+/*
+Link Dictate Co panel styles.
+*/
+
+.link-dictate-co-container {
+	padding: 0.75rem;
+}
+
+.link-dictate-co-section + .link-dictate-co-section {
+	margin-top: 1.25rem;
+}
+
+.link-dictate-co-section-title {
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--text-muted);
+	margin-bottom: 0.5rem;
+}
+
+.link-dictate-co-status {
+	font-size: var(--font-ui-smaller);
+	margin-bottom: 0.75rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-s);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.ldc-idle {
+	color: var(--text-muted);
+	background-color: var(--background-modifier-form-field);
+}
+
+.ldc-recording {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+.link-dictate-co-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.link-dictate-co-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.35rem 0.5rem;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.link-dictate-co-row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.link-dictate-co-target {
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.link-dictate-co-count {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	flex-shrink: 0;
+	margin-left: 0.5rem;
+}
+
+.link-dictate-co-empty {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-style: italic;
+}

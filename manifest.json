@@ -1,0 +1,9 @@
+{
+	"id": "link-dictate-co",
+	"name": "Link Dictate Co",
+	"version": "0.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "Click vault links to insert them into Handy voice dictation.",
+	"author": "Caffa",
+	"isDesktopOnly": true
+}
