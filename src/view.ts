@@ -16,7 +16,7 @@ const POLL_INTERVAL_MS = 2000;
 
 export class LinkDictateCoView extends ItemView {
 	plugin: LinkDictateCoPlugin;
-	containerEl: HTMLElement;
+	rootEl: HTMLElement;
 	statusEl: HTMLElement;
 	currentSectionEl: HTMLElement;
 	vaultSectionEl: HTMLElement;
@@ -25,10 +25,10 @@ export class LinkDictateCoView extends ItemView {
 	constructor(leaf: WorkspaceLeaf, plugin: LinkDictateCoPlugin) {
 		super(leaf);
 		this.plugin = plugin;
-		this.containerEl = this.contentEl.createDiv({ cls: 'link-dictate-co-container' });
-		this.statusEl = this.containerEl.createDiv({ cls: 'link-dictate-co-status ldc-idle' });
-		this.currentSectionEl = this.containerEl.createDiv({ cls: 'link-dictate-co-section' });
-		this.vaultSectionEl = this.containerEl.createDiv({ cls: 'link-dictate-co-section' });
+		this.rootEl = this.contentEl.createDiv({ cls: 'link-dictate-co-container' });
+		this.statusEl = this.rootEl.createDiv({ cls: 'link-dictate-co-status ldc-idle' });
+		this.currentSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
+		this.vaultSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 	}
 
 	getViewType(): string {
