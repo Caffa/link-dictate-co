@@ -6,7 +6,7 @@ import {
 import type LinkDictateCoPlugin from './plugin';
 import { HandyClient } from './handy-client';
 import { requestUrlTransport } from './transport';
-import { currentNoteLinks, frequentLinks } from './links';
+import { currentNoteLinks, frequentLinks, sameFolderLinks, type FrequentLink } from './links';
 import { formatInsertToken } from './token';
 
 export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
@@ -19,8 +19,13 @@ export class LinkDictateCoView extends ItemView {
 	rootEl: HTMLElement;
 	statusEl: HTMLElement;
 	currentSectionEl: HTMLElement;
+	sameFolderSectionEl: HTMLElement;
 	vaultSectionEl: HTMLElement;
+	emptyHintEl: HTMLElement;
 	pollTimer?: number;
+	private currentHasLinks = false;
+	private sameFolderHasLinks = false;
+	private vaultHasLinks = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: LinkDictateCoPlugin) {
 		super(leaf);
@@ -28,7 +33,12 @@ export class LinkDictateCoView extends ItemView {
 		this.rootEl = this.contentEl.createDiv({ cls: 'link-dictate-co-container' });
 		this.statusEl = this.rootEl.createDiv({ cls: 'link-dictate-co-status ldc-idle' });
 		this.currentSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
+		this.sameFolderSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 		this.vaultSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
+		this.emptyHintEl = this.rootEl.createDiv({
+			cls: 'link-dictate-co-empty link-dictate-co-global-hint',
+			text: 'No links yet',
+		});
 	}
 
 	getViewType(): string {
@@ -40,7 +50,6 @@ export class LinkDictateCoView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.renderStaticSections();
 		this.refresh();
 		this.pollTimer = window.setInterval(() => {
 			void this.pollState();
@@ -53,20 +62,6 @@ export class LinkDictateCoView extends ItemView {
 			window.clearInterval(this.pollTimer);
 			this.pollTimer = undefined;
 		}
-	}
-
-	private renderStaticSections(): void {
-		this.currentSectionEl.empty();
-		this.currentSectionEl.createDiv({
-			cls: 'link-dictate-co-section-title',
-			text: 'Current note',
-		});
-
-		this.vaultSectionEl.empty();
-		this.vaultSectionEl.createDiv({
-			cls: 'link-dictate-co-section-title',
-			text: 'Vault-wide frequent links',
-		});
 	}
 
 	private handyClient(): HandyClient {
@@ -108,33 +103,77 @@ export class LinkDictateCoView extends ItemView {
 		const activeFile = this.app.workspace.getActiveFile();
 
 		const currentPath = activeFile?.path ?? '';
-		const currentLinks = currentNoteLinks(resolved, currentPath);
+		const { settings } = this.plugin;
 
-		this.renderList(this.currentSectionEl, currentLinks, false);
+		this.currentHasLinks = this.renderSection(
+			this.currentSectionEl,
+			settings.showCurrentNote,
+			'Current note',
+			currentNoteLinks(resolved, currentPath),
+			false,
+		);
+
+		const sameFolder = settings.showSameFolder
+			? sameFolderLinks(resolved, currentPath, VAULT_LINK_LIMIT)
+			: [];
+		this.sameFolderHasLinks = this.renderSection(
+			this.sameFolderSectionEl,
+			settings.showSameFolder,
+			'Same folder',
+			sameFolder.map((link) => link.target),
+			true,
+			sameFolder,
+		);
 
 		if (!currentOnly) {
-			const frequent = frequentLinks(resolved, VAULT_LINK_LIMIT);
-			this.renderList(
+			const frequent = settings.showVaultWide
+				? frequentLinks(resolved, VAULT_LINK_LIMIT)
+				: [];
+			this.vaultHasLinks = this.renderSection(
 				this.vaultSectionEl,
+				settings.showVaultWide,
+				'Vault-wide frequent links',
 				frequent.map((link) => link.target),
 				true,
 				frequent,
 			);
 		}
+
+		this.updateEmptyHint();
 	}
 
-	private renderList(
+	private updateEmptyHint(): void {
+		const { settings } = this.plugin;
+		const enabledSections = [
+			settings.showCurrentNote,
+			settings.showSameFolder,
+			settings.showVaultWide,
+		].filter(Boolean).length;
+		const hasLinks =
+			(settings.showCurrentNote && this.currentHasLinks) ||
+			(settings.showSameFolder && this.sameFolderHasLinks) ||
+			(settings.showVaultWide && this.vaultHasLinks);
+		this.emptyHintEl.style.display = enabledSections > 0 && !hasLinks ? '' : 'none';
+	}
+
+	private renderSection(
 		section: HTMLElement,
+		enabled: boolean,
+		title: string,
 		targets: string[],
 		showCounts: boolean,
-		counts?: { target: string; count: number }[],
-	): void {
-		// Preserve the title element.
-		const title = section.querySelector('.link-dictate-co-section-title');
+		counts?: FrequentLink[],
+	): boolean {
 		section.empty();
-		if (title) {
-			section.appendChild(title);
+		if (!enabled) {
+			section.style.display = 'none';
+			return false;
 		}
+		section.style.display = '';
+		section.createDiv({
+			cls: 'link-dictate-co-section-title',
+			text: title,
+		});
 
 		const list = section.createDiv({ cls: 'link-dictate-co-list' });
 
@@ -143,7 +182,7 @@ export class LinkDictateCoView extends ItemView {
 				cls: 'link-dictate-co-empty',
 				text: 'No links available',
 			});
-			return;
+			return false;
 		}
 
 		for (const target of targets) {
@@ -159,6 +198,8 @@ export class LinkDictateCoView extends ItemView {
 				void this.handleInsert(target);
 			});
 		}
+
+		return true;
 	}
 
 	private async handleInsert(target: string): Promise<void> {

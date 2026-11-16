@@ -78,3 +78,7 @@ Link Dictate Co panel styles.
 	color: var(--text-muted);
 	font-style: italic;
 }
+
+.link-dictate-co-global-hint {
+	margin-top: 0.75rem;
+}
