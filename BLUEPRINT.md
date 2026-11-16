@@ -14,12 +14,11 @@ discord_channel: https://discord.com/channels/1486966847810043924/15718442636612
 
 ## Where it stands
 
-- v0.1.0 scaffolded with Obsidian plugin skeleton + release scripts adapted from `obsidian-sticky-headings-no-flicker`.
-- Right-sidebar panel lists current-note links and top 25 vault-wide frequent links from `metadataCache.resolvedLinks`.
-- Clicking a link POSTs `{"text":"[[Target]]"}` (or alias form when enabled) to `127.0.0.1:<port>/insert` with Bearer auth.
-- Polls `/state` every 2 s while the view is open; applies `ldc-idle` / `ldc-recording` CSS classes.
-- Settings tab configures port, secret, insert style, and a test-connection button.
-- All unit + integration tests pass under `bun test`; build produces `main.js` + `manifest.json` + `styles.css`.
+- v0.1.1 released: right-sidebar panel lists current-note links and top vault-wide frequent links from `metadataCache.resolvedLinks`.
+- Clicking a row POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`; `/state` polled ~2 s styles the panel idle/recording.
+- Deep-review fixes shipped: `requestUrl` `throw:false` (401/409 handled), distinct 413 notice, view `containerEl`→`rootEl` per the Obsidian leaf contract, tab-switch refreshes only the current-note section, dead code removed.
+- Repo pushed to github.com/Caffa/link-dictate-co with releases 0.1.0 and 0.1.1; 22 tests + build typecheck green.
+- Known gaps: never runtime-tested inside Obsidian; the alias insert-style option is inert until a v0.2 alias map; the Handy Phase-1 API is unverified at runtime.
 
 ## How to run
 
@@ -40,6 +39,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-16 — v0.1.1: deep-review fixes
+
+Shipped the deep-review fixes as release 0.1.1: `requestUrl` now uses `throw:false` so 401/409 responses are handled, the view's `containerEl` was renamed `rootEl` per the Obsidian leaf contract, tab switches refresh only the current-note section, and 413 buffer-full responses get a distinct notice; dead settings code was removed. Repo pushed to github.com/Caffa/link-dictate-co with releases 0.1.0 and 0.1.1; 22 tests and the build typecheck are green.
+
+Next: runtime-test the plugin inside Obsidian against a running Handy app.
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-16 — v0.1.0 build + tests green
 
