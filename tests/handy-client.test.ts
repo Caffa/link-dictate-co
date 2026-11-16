@@ -149,6 +149,22 @@ describe('HandyClient integration with bun.serve', () => {
 		expect(lastRequest?.headers.authorization).toBe('Bearer testsecret');
 	});
 
+	it('maps 401 to unauthorized via injected fake transport', async () => {
+		const client = new HandyClient(48213, 'secret', async () => ({
+			status: 401,
+			json: null,
+		}));
+		expect(await client.insert('[[Foo]]')).toBe('unauthorized');
+	});
+
+	it('maps 413 to buffer_full via injected fake transport', async () => {
+		const client = new HandyClient(48213, 'secret', async () => ({
+			status: 413,
+			json: { error: 'buffer_full' },
+		}));
+		expect(await client.insert('[[Foo]]')).toBe('buffer_full');
+	});
+
 	it('health requires no auth', async () => {
 		const client = new HandyClient(server.port!, '', async (req) => {
 			const response = await fetch(req.url, {

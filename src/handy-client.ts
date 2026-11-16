@@ -83,7 +83,7 @@ export class HandyClient {
 		}
 	}
 
-	async insert(text: string): Promise<'ok' | 'not_recording' | 'unauthorized' | 'error'> {
+	async insert(text: string): Promise<'ok' | 'not_recording' | 'unauthorized' | 'buffer_full' | 'error'> {
 		try {
 			const response = await this.transport({
 				method: 'POST',
@@ -102,6 +102,8 @@ export class HandyClient {
 					return 'unauthorized';
 				case 409:
 					return 'not_recording';
+				case 413:
+					return 'buffer_full';
 				default:
 					return 'error';
 			}

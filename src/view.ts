@@ -174,6 +174,9 @@ export class LinkDictateCoView extends ItemView {
 			case 'unauthorized':
 				new Notice('Handy rejected the secret');
 				break;
+			case 'buffer_full':
+				new Notice("Handy's token buffer is full");
+				break;
 			case 'error':
 			default:
 				new Notice('Handy unreachable');
