@@ -52,10 +52,6 @@ export default class LinkDictateCoPlugin extends Plugin {
 		this.settings = mergeSettings(await this.loadData());
 	}
 
-	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
-	}
-
 	private debouncedRefresh(): void {
 		if (this.refreshTimer) {
 			window.clearTimeout(this.refreshTimer);

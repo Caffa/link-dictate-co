@@ -13,8 +13,6 @@ import {
 	type LinkDictateCoSettings,
 } from './settings-core';
 
-export { DEFAULT_SETTINGS, mergeSettings, type LinkDictateCoSettings };
-
 export class LinkDictateCoSettingTab extends PluginSettingTab {
 	plugin: LinkDictateCoPlugin;
 
