@@ -113,9 +113,10 @@ export class LinkDictateCoView extends ItemView {
 			false,
 		);
 
-		const sameFolder = settings.showSameFolder
-			? sameFolderLinks(resolved, currentPath, VAULT_LINK_LIMIT)
-			: [];
+		const sameFolder =
+			settings.showSameFolder && activeFile
+				? sameFolderLinks(resolved, currentPath, VAULT_LINK_LIMIT)
+				: [];
 		this.sameFolderHasLinks = this.renderSection(
 			this.sameFolderSectionEl,
 			settings.showSameFolder,
