@@ -100,7 +100,7 @@ export class LinkDictateCoView extends ItemView {
 		}
 	}
 
-	refresh(): void {
+	refresh(currentOnly = false): void {
 		const resolved = this.app.metadataCache.resolvedLinks as Record<
 			string,
 			Record<string, number>
@@ -109,15 +109,18 @@ export class LinkDictateCoView extends ItemView {
 
 		const currentPath = activeFile?.path ?? '';
 		const currentLinks = currentNoteLinks(resolved, currentPath);
-		const frequent = frequentLinks(resolved, VAULT_LINK_LIMIT);
 
 		this.renderList(this.currentSectionEl, currentLinks, false);
-		this.renderList(
-			this.vaultSectionEl,
-			frequent.map((link) => link.target),
-			true,
-			frequent,
-		);
+
+		if (!currentOnly) {
+			const frequent = frequentLinks(resolved, VAULT_LINK_LIMIT);
+			this.renderList(
+				this.vaultSectionEl,
+				frequent.map((link) => link.target),
+				true,
+				frequent,
+			);
+		}
 	}
 
 	private renderList(

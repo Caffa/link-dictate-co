@@ -37,7 +37,7 @@ export default class LinkDictateCoPlugin extends Plugin {
 			this.app.metadataCache.on('changed', () => this.debouncedRefresh()),
 		);
 		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => this.refreshView()),
+			this.app.workspace.on('active-leaf-change', () => this.refreshView(true)),
 		);
 	}
 
@@ -61,16 +61,17 @@ export default class LinkDictateCoPlugin extends Plugin {
 			window.clearTimeout(this.refreshTimer);
 		}
 		this.refreshTimer = window.setTimeout(() => {
+			this.refreshTimer = undefined;
 			this.refreshView();
 		}, REFRESH_DEBOUNCE_MS);
 	}
 
-	private refreshView(): void {
+	private refreshView(currentOnly = false): void {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_LINK_DICTATE_CO);
 		for (const leaf of leaves) {
 			const view = leaf.view;
 			if (view instanceof LinkDictateCoView) {
-				view.refresh();
+				view.refresh(currentOnly);
 			}
 		}
 	}
