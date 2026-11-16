@@ -7,6 +7,7 @@ export const requestUrlTransport: Transport = async (req: TransportRequest): Pro
 		method: req.method,
 		headers: req.headers,
 		body: req.body,
+		throw: false,
 	});
 
 	let json: unknown = null;
