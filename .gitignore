@@ -24,3 +24,6 @@ data.json
 dist
 
 .eslintcache
+
+# Local plugin distribution folder created by sendToNovelVault.sh
+link-dictate-co/
