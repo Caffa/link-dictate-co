@@ -14,12 +14,11 @@ discord_channel: https://discord.com/channels/1486966847810043924/15718442636612
 
 ## Where it stands
 
-- v0.3.0 + v0.3.1 released after a Discord user request: panel rows show the note basename with the path hidden (faint grey parent-folder suffix only when two targets in the same list share a basename), plus nested frontmatter-alias sub-rows — an alias click always inserts `[[Target|Alias]]`, the main row follows the insert-style setting, so no manual alias map is needed.
-- Link Colorer integration (`src/colorer.ts` + `src/colorer-palettes.ts`) replicates the user's own link-colorer plugin pipeline — djb2 seed hash, prefix strip, least-used palette slot with scoped usage normalization, HSL jitter — reads live instance settings via `getColorUsageStats`, applies inline `--link-color` styles, refreshes on `css-change`, and falls back to the default text color when the plugin is absent.
-- The 0.3.1 fixes were found by a byte-level diff against link-colorer's main.js plus a pipeline simulation over the real vault (three color divergences + the inert-alias bug). Core flow unchanged: row click POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling, per-section toggles and same-folder aggregation from v0.2.x intact.
-- 85 bun tests pass, build/typecheck green; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault.
-- v0.4.0 adds a configurable link filter (comma-separated substrings) applied globally across all three panel sections after ranking; surviving rows still get alias/collision/color treatment.
-- Unverified in Obsidian: the color match against the user's live link-colorer rendering and the panel redesign runtime behavior; Handy Phase-1 API also unverified at runtime; "relevant links" (2-hop) section still future.
+- Latest release 0.5.1: the current-note and same-folder sections merge into one when both toggles are on (current-note links prioritized by folder count, `fromCurrent` marker); alias display mode setting `all` | `used` (default `used` — only aliases actually used as `[[Target|Alias]]` in the current note or same folder, via a metadataCache links scan); clickable alias hover styling; filter-trimmed display names (`trimFilterFromBasename`, display-only). 0.5.1 fixed a review-caught regression where same-folder-only panels showed the "No links yet" hint under a populated list.
+- Link Colorer integration (`src/colorer.ts` + `src/colorer-palettes.ts`) re-verified byte-level against link-colorer 2.0.8 main.js: normalize = decodeURIComponent + single stripPrefixOnce + trim/lowercase (`.md` NOT stripped), plus live `getLinkColorMap` lookup and lazy-plugins load resilience; equivalence proven 630/630 identical hex vs the ground-truth pipeline over real vault paths. User context: link-colorer is installed-but-disabled in Novel-Writing (only ZettelPublish has it enabled) and lazy-plugins delays plugin startup 5–15 s, so panel colors appear only after lazy load + panel refresh.
+- Core flow unchanged: row click POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling; per-section toggles, same-folder aggregation (v0.2.x), basename display with collision suffixes (v0.3.x), and the v0.4.0 link filter (applied after ranking, before alias/collision/color treatment) all intact.
+- 107 bun tests pass, build/typecheck green; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault.
+- Unverified in Obsidian: all 0.5.x UI changes at runtime; also the color match against live link-colorer rendering and the Handy Phase-1 API; "relevant links" (2-hop) section still future.
 
 ## How to run
 
@@ -41,6 +40,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-17 — v0.5.0 + v0.5.1: merged panel section, alias display mode, colorer re-verified
+
+v0.5.0 (7 commits) merged the current-note and same-folder sections into a single section when both toggles are on (current-note links prioritized by folder count, marked with a `fromCurrent` marker), added an alias display mode setting (`all` | `used`, default `used` — only aliases actually used as `[[Target|Alias]]` in the current note or same folder, found via a metadataCache links scan), clickable alias hover styling, and display-only filter trimming (`trimFilterFromBasename` strips the matched filter substring from shown names). The colorer normalize step was re-verified byte-level against link-colorer 2.0.8 main.js (decodeURIComponent + single stripPrefixOnce + trim/lowercase, `.md` not stripped), switched to the live `getLinkColorMap` lookup with lazy-plugins load resilience, and proven equivalent 630/630 identical hex vs the ground-truth pipeline over real vault paths. A review pass caught a v0.5.0 regression — same-folder-only panels showed the "No links yet" hint under a populated list — fixed in 0.5.1; 107 bun tests pass, released 0.5.0 + 0.5.1 (https://github.com/Caffa/link-dictate-co/releases/tag/0.5.1) and deployed to Novel-Writing, ZettelPublish, and Journal.
+
+Next: runtime-test all 0.5.x UI changes inside Obsidian (colors will only appear after lazy-plugins loads link-colorer 5–15 s in and the panel refreshes).
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-17 — v0.4.0: configurable link filter
 
