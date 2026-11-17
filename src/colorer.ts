@@ -49,8 +49,8 @@ export function stripPrefixOnce(text: string): string | null {
 export function normalizeForHash(text: string, ignorePrefix: boolean): string {
 	let current = text;
 	if (ignorePrefix) {
-		let stripped: string | null;
-		while ((stripped = stripPrefixOnce(current)) !== null) {
+		const stripped = stripPrefixOnce(current);
+		if (stripped !== null) {
 			current = stripped;
 		}
 	}
@@ -209,19 +209,32 @@ export function rgbToHex(r: number, g: number, b: number): string {
 	return `#${pad(r)}${pad(g)}${pad(b)}`;
 }
 
-function usageKey(palette: string, hashMode: string, isDark: boolean, seed: number, slot: number): string {
-	return `${palette}-${hashMode}-${isDark ? 'dark' : 'light'}-${seed}-${slot}`;
+function usageKey(palette: string, isDark: boolean, seed: number, slot: number): string {
+	return `${palette}-random-${isDark ? 'dark' : 'light'}-${seed}-${slot}`;
 }
 
-function normalizeUsageMap(map: Map<string, number>): void {
+function normalizeUsageMap(
+	map: Map<string, number>,
+	palette: string,
+	isDark: boolean,
+	seed: number,
+	slotCount: number,
+): void {
 	const threshold = 50;
-	let min = Number.MAX_SAFE_INTEGER;
-	const keys = Array.from(map.keys());
-	for (const key of keys) {
-		min = Math.min(min, map.get(key) ?? 0);
+	const activeKeys = new Set<string>();
+	for (let slot = 0; slot < slotCount; slot++) {
+		activeKeys.add(usageKey(palette, isDark, seed, slot));
 	}
+
+	let min = Number.MAX_SAFE_INTEGER;
+	for (const key of map.keys()) {
+		if (activeKeys.has(key)) {
+			min = Math.min(min, map.get(key) ?? 0);
+		}
+	}
+
 	if (min >= threshold) {
-		for (const key of keys) {
+		for (const key of activeKeys) {
 			const value = map.get(key);
 			if (value !== undefined) {
 				map.set(key, value - min);
@@ -234,7 +247,6 @@ export function leastUsedSlot(
 	usageMap: Map<string, number>,
 	hash: number,
 	palette: string,
-	hashMode: string,
 	isDark: boolean,
 	seed: number,
 	slotCount: number,
@@ -245,7 +257,7 @@ export function leastUsedSlot(
 
 	for (let offset = 0; offset < slotCount; offset++) {
 		const slot = (start + offset) % slotCount;
-		const key = usageKey(palette, hashMode, isDark, seed, slot);
+		const key = usageKey(palette, isDark, seed, slot);
 		const count = usageMap.get(key) ?? 0;
 		if (count < bestCount) {
 			bestCount = count;
@@ -264,9 +276,9 @@ export function leastUsedSlot(
 		chosen = candidates[Math.abs(tieHash) % candidates.length]!;
 	}
 
-	const chosenKey = usageKey(palette, hashMode, isDark, seed, chosen);
+	const chosenKey = usageKey(palette, isDark, seed, chosen);
 	usageMap.set(chosenKey, (usageMap.get(chosenKey) ?? 0) + 1);
-	normalizeUsageMap(usageMap);
+	normalizeUsageMap(usageMap, palette, isDark, seed, slotCount);
 	return chosen;
 }
 
@@ -318,7 +330,7 @@ export function computeColor(
 	isDark: boolean,
 	usageMap: Map<string, number>,
 ): string | null {
-	const paletteDef = PALETTES[settings.palette];
+	const paletteDef = PALETTES[settings.palette] ?? PALETTES.vibrant;
 	if (!paletteDef) return null;
 
 	const hashMode: HashMode = settings.hashMode;
@@ -338,9 +350,9 @@ export function computeColor(
 	}
 
 	const palette = isDark ? paletteDef.dark : paletteDef.light;
-	const slot = leastUsedSlot(usageMap, hash, settings.palette, hashMode, isDark, seed, palette.length);
+	const slot = leastUsedSlot(usageMap, hash, settings.palette, isDark, seed, palette.length);
 	const base = palette[slot]!;
-	const usageCount = usageMap.get(usageKey(settings.palette, hashMode, isDark, seed, slot)) ?? 0;
+	const usageCount = usageMap.get(usageKey(settings.palette, isDark, seed, slot)) ?? 0;
 	const variationHash = hashDjb2(`${normalized}|v`, seed);
 	return adjustColor(base, variationHash, usageCount, isDark, settings);
 }
@@ -405,11 +417,19 @@ export function prepareColorContext(app: App): ColorContext | null {
 
 		let usageMap: Map<string, number> = new Map();
 		const instance = plugin as Record<string, unknown>;
-		if (typeof instance.getColorUsageMap === 'function') {
-			const raw = instance.getColorUsageMap();
+		const accessor =
+			typeof instance.getColorUsageStats === 'function'
+				? instance.getColorUsageStats
+				: typeof instance.getColorUsageMap === 'function'
+					? instance.getColorUsageMap
+					: null;
+		if (accessor) {
+			const raw = accessor.call(instance);
 			if (raw instanceof Map) {
 				usageMap = cloneUsageMap(raw);
 			}
+		} else {
+			console.debug('link-colorer instance found but exposes no usage accessor');
 		}
 
 		return { settings, isDark, usageMap, plugin };

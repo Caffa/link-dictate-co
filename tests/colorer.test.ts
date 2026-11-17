@@ -32,7 +32,13 @@ describe('normalizeForHash', () => {
 		expect(normalizeForHash('  Foo Bar  ', false)).toBe('foo bar');
 	});
 
-	it('strips prefixes recursively using separators', () => {
+	it('strips a single prefix separator once, preserving later separators', () => {
+		expect(normalizeForHash('InfoMap - Alternative input methods - Typing and Keyboards', true)).toBe(
+			'alternative input methods - typing and keyboards',
+		);
+	});
+
+	it('still reaches a clean suffix when one strip is enough', () => {
 		expect(normalizeForHash('Worldbuilding/Chars/Char - B', true)).toBe('b');
 	});
 
@@ -98,22 +104,22 @@ describe('hashPhonetic', () => {
 describe('leastUsedSlot', () => {
 	it('picks a valid slot on a fresh map', () => {
 		const map = new Map<string, number>();
-		const slot = leastUsedSlot(map, 5, 'vibrant', 'strict-full', true, 5381, 8);
+		const slot = leastUsedSlot(map, 5, 'vibrant', true, 5381, 8);
 		expect(slot).toBeGreaterThanOrEqual(0);
 		expect(slot).toBeLessThan(8);
 	});
 
 	it('avoids a used slot when another is free', () => {
 		const map = new Map<string, number>();
-		map.set('vibrant-strict-full-dark-5381-5', 1);
-		const slot = leastUsedSlot(map, 5, 'vibrant', 'strict-full', true, 5381, 8);
+		map.set('vibrant-random-dark-5381-5', 1);
+		const slot = leastUsedSlot(map, 5, 'vibrant', true, 5381, 8);
 		expect(slot).not.toBe(5);
 	});
 
 	it('increments the chosen slot', () => {
 		const map = new Map<string, number>();
-		const slot = leastUsedSlot(map, 0, 'vibrant', 'strict-full', true, 5381, 8);
-		expect(map.get(`vibrant-strict-full-dark-5381-${slot}`)).toBe(1);
+		const slot = leastUsedSlot(map, 0, 'vibrant', true, 5381, 8);
+		expect(map.get(`vibrant-random-dark-5381-${slot}`)).toBe(1);
 	});
 });
 
@@ -124,10 +130,13 @@ describe('computeColor', () => {
 		expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
 	});
 
-	it('returns null for an unknown palette', () => {
+	it('falls back to the vibrant palette for an unknown palette', () => {
 		const map = new Map<string, number>();
-		const color = computeColor('x', { ...sampleSettings, palette: 'missing' }, true, map);
-		expect(color).toBeNull();
+		const vibrant = computeColor('x', sampleSettings, true, map);
+		const map2 = new Map<string, number>();
+		const fallback = computeColor('x', { ...sampleSettings, palette: 'missing' }, true, map2);
+		expect(fallback).not.toBeNull();
+		expect(fallback).toBe(vibrant);
 	});
 
 	it('uses the same color for the same input in the same context', () => {
@@ -142,6 +151,22 @@ describe('computeColor', () => {
 		const map2 = new Map<string, number>(map);
 		const light = computeColor('x', sampleSettings, false, map2);
 		expect(dark).not.toBe(light);
+	});
+
+	it('normalizes usage counts only within the active theme slot keys', () => {
+		const darkOnly = new Map<string, number>();
+		const withLightZeros = new Map<string, number>();
+		for (let slot = 0; slot < 8; slot++) {
+			const key = `vibrant-random-dark-5381-${slot}`;
+			darkOnly.set(key, 55 + slot);
+			withLightZeros.set(key, 55 + slot);
+			withLightZeros.set(`vibrant-random-light-5381-${slot}`, 0);
+		}
+		const colorDarkOnly = computeColor('scoped', sampleSettings, true, darkOnly);
+		const colorWithLightZeros = computeColor('scoped', sampleSettings, true, withLightZeros);
+		// If normalization looked at every key, the light zeros would prevent
+		// subtracting the dark baseline and the usage count would differ.
+		expect(colorDarkOnly).toBe(colorWithLightZeros);
 	});
 });
 
