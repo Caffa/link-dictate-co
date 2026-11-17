@@ -14,6 +14,7 @@ discord_channel: https://discord.com/channels/1486966847810043924/15718442636612
 
 ## Where it stands
 
+- v0.3.1 released: Link Colorer integration now matches the live plugin's reading-view colors by reading `getColorUsageStats` (falling back to `getColorUsageMap`), normalizing usage only over the active palette/theme/seed slots, and using single (not recursive) prefix stripping. Alias sub-rows always insert `[[Target|Alias]]` regardless of the `insertStyle` setting. Unknown palettes fall back to vibrant.
 - v0.3.0 released: panel rows now show the note basename instead of the full path, display a faint parent-folder suffix when basenames collide inside a section list, and expose nested alias sub-rows under each link. The alias insert-style now works via frontmatter aliases. Link Colorer integration replicates the live plugin's color pipeline (hash, prefix stripping, least-used palette slot, HSL jitter) and applies matching inline colors to main rows and aliases; panel refreshes on `css-change`.
 - v0.2.1 released: right-sidebar sections are individually toggleable (showCurrentNote/showSameFolder/showVaultWide, all default on) and there's a new "Links in same folder" panel section — exact-directory aggregation ranked by count, refreshed on tab switch.
 - Same-folder aggregation counts links only from files in the active note's directory, excluding the note itself; the no-active-file edge case (vault-root links leaking in) is fixed.
@@ -40,6 +41,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-17 — v0.3.1: colorer matches reading view, alias rows always insert alias form
+
+Fixed the Link Colorer integration so colors match the reading view: read `instance.getColorUsageStats` first (falling back to `getColorUsageMap`), normalize usage counts only over the active palette/theme/seed slot keys, strip prefixes once like the live plugin, and fall back to the vibrant palette for unknown palette names. Alias sub-row clicks now bypass the `insertStyle` setting and always insert `[[Target|Alias]]`, while main rows keep the existing `insertStyle` semantics. Also deduped alias rows per target and skipped aliases that match the note basename case-insensitively, computed the basename once per row, and removed an unused `row.dataset.target`. Total tests now 68, build and typecheck green. Released 0.3.1 and deployed to Novel-Writing, ZettelPublish, and Journal vaults via `sendToNovelVault.sh`.
+
+Next: runtime-test the updated color integration inside Obsidian against the user's actual Link Colorer setup; verify alias rows insert the alias form.
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-17 — v0.3.0: basename display, aliases, and Link Colorer colors
 
