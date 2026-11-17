@@ -61,6 +61,11 @@ Link Dictate Co panel styles.
 	background-color: transparent;
 }
 
+.link-dictate-co-from-current {
+	border-left: 2px solid var(--interactive-accent);
+	padding-left: calc(0.5rem - 2px);
+}
+
 .link-dictate-co-main {
 	display: flex;
 	align-items: center;
@@ -107,10 +112,15 @@ Link Dictate Co panel styles.
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	border-radius: var(--radius-s);
 }
 
 .link-dictate-co-alias-row:hover {
 	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+	text-decoration: underline;
+	text-decoration-color: var(--text-faint);
+	text-underline-offset: 0.15em;
 }
 
 .link-dictate-co-empty {
