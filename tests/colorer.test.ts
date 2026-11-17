@@ -49,6 +49,18 @@ describe('normalizeForHash', () => {
 	it('leaves text unchanged when ignorePrefix is false', () => {
 		expect(normalizeForHash('Worldbuilding/Chars/Char - B', false)).toBe('worldbuilding/chars/char - b');
 	});
+
+	it('decodes percent-encoded text before normalizing', () => {
+		expect(normalizeForHash('Note%20with%20spaces.md', false)).toBe('note with spaces.md');
+	});
+
+	it('keeps invalid percent sequences intact', () => {
+		expect(normalizeForHash('Note%ZZ.md', false)).toBe('note%zz.md');
+	});
+
+	it('preserves the .md extension for reading-view path equivalence', () => {
+		expect(normalizeForHash('A/B/C.md', true)).toBe('b/c.md');
+	});
 });
 
 describe('stripPrefixOnce', () => {

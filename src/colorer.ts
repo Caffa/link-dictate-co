@@ -1,4 +1,5 @@
 import type { App } from 'obsidian';
+import { basenameOfTarget } from './display';
 import { PALETTES } from './colorer-palettes';
 export { PALETTES } from './colorer-palettes';
 
@@ -48,6 +49,11 @@ export function stripPrefixOnce(text: string): string | null {
 
 export function normalizeForHash(text: string, ignorePrefix: boolean): string {
 	let current = text;
+	try {
+		current = decodeURIComponent(current);
+	} catch {
+		// leave current as-is if decoding fails
+	}
 	if (ignorePrefix) {
 		const stripped = stripPrefixOnce(current);
 		if (stripped !== null) {
@@ -378,6 +384,17 @@ export function getLinkColorer(app: App): unknown | null {
 
 const ALLOWED_HASH_MODES: HashMode[] = ['random', 'strict-full', 'strict-acronym', 'phonetic-ipa'];
 
+let lastAbsentLog = 0;
+const ABSENT_LOG_THROTTLE_MS = 30_000;
+
+function throttledDebug(message: string): void {
+	const now = Date.now();
+	if (now - lastAbsentLog > ABSENT_LOG_THROTTLE_MS) {
+		lastAbsentLog = now;
+		console.debug(message);
+	}
+}
+
 function isValidNumber(value: unknown): value is number {
 	return typeof value === 'number' && !Number.isNaN(value);
 }
@@ -407,7 +424,10 @@ function cloneUsageMap(input: unknown): Map<string, number> {
 
 export function prepareColorContext(app: App): ColorContext | null {
 	const plugin = getLinkColorer(app);
-	if (!plugin) return null;
+	if (!plugin) {
+		throttledDebug('link-colorer plugin not available; skipping color integration');
+		return null;
+	}
 
 	try {
 		const settings = validateSettings((plugin as Record<string, unknown>).settings);
@@ -438,16 +458,45 @@ export function prepareColorContext(app: App): ColorContext | null {
 	}
 }
 
+function suffixForKey(hashMode: HashMode, normalized: string): string {
+	return `-${hashMode}-${normalized}`;
+}
+
+function findLiveColor(
+	target: string,
+	ctx: ColorContext,
+	hashMode: HashMode,
+): string | null {
+	const plugin = ctx.plugin as Record<string, unknown> | undefined;
+	if (!plugin) return null;
+	const getMap = plugin.getLinkColorMap;
+	if (typeof getMap !== 'function') return null;
+	try {
+		const map = getMap.call(plugin) as unknown;
+		if (!(map instanceof Map)) return null;
+		const candidates = new Set<string>();
+		candidates.add(normalizeForHash(target, ctx.settings.ignorePrefix));
+		candidates.add(normalizeForHash(basenameOfTarget(target), ctx.settings.ignorePrefix));
+		const suffixes = Array.from(candidates).map((n) => suffixForKey(hashMode, n));
+		for (const [key, color] of map.entries()) {
+			if (typeof key !== 'string') continue;
+			if (suffixes.some((s) => key.endsWith(s))) {
+				return color;
+			}
+		}
+	} catch {
+		// ignore live lookup failures and fall back to computeColor
+	}
+	return null;
+}
+
 export function colorForTarget(target: string, ctx: ColorContext | null): string | null {
 	if (!ctx) return null;
 	try {
-		let path = target.endsWith('.md') ? target.slice(0, -3) : target;
-		try {
-			path = decodeURIComponent(path);
-		} catch {
-			// leave path as-is if decoding fails
-		}
-		return computeColor(path, ctx.settings, ctx.isDark, ctx.usageMap);
+		const hashMode = ctx.settings.hashMode;
+		const live = findLiveColor(target, ctx, hashMode);
+		if (live) return live;
+		return computeColor(target, ctx.settings, ctx.isDark, ctx.usageMap);
 	} catch {
 		return null;
 	}
