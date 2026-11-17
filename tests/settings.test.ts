@@ -21,6 +21,7 @@ describe('mergeSettings', () => {
 			showSameFolder: true,
 			showVaultWide: true,
 			linkFilters: '',
+			aliasMode: 'used',
 		});
 		expect(result).not.toHaveProperty('extra');
 	});

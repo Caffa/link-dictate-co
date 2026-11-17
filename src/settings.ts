@@ -129,6 +129,22 @@ export class LinkDictateCoSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
+			.setName('Alias display')
+			.setDesc('Which aliases to show as sub-rows.')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('all', 'All aliases')
+					.addOption('used', 'Only used aliases')
+					.setValue(this.plugin.settings.aliasMode)
+					.onChange(async (value) => {
+						const mode = value as 'all' | 'used';
+						this.plugin.settings.aliasMode = mode;
+						await this.plugin.saveData(this.plugin.settings);
+						this.plugin.refreshView();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName('Test connection')
 			.setDesc('Ping Handy on the configured port.')
 			.addButton((button) =>

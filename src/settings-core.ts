@@ -6,6 +6,7 @@ export interface LinkDictateCoSettings {
 	showSameFolder: boolean;
 	showVaultWide: boolean;
 	linkFilters: string;
+	aliasMode: 'all' | 'used';
 }
 
 export const DEFAULT_SETTINGS: LinkDictateCoSettings = {
@@ -16,6 +17,7 @@ export const DEFAULT_SETTINGS: LinkDictateCoSettings = {
 	showSameFolder: true,
 	showVaultWide: true,
 	linkFilters: '',
+	aliasMode: 'used',
 };
 
 export function mergeSettings(input: unknown): LinkDictateCoSettings {
@@ -54,6 +56,11 @@ export function mergeSettings(input: unknown): LinkDictateCoSettings {
 		out.linkFilters = raw.linkFilters;
 	} else {
 		out.linkFilters = '';
+	}
+
+	if ('aliasMode' in raw) {
+		const mode = String(raw.aliasMode);
+		out.aliasMode = mode === 'all' || mode === 'used' ? mode : 'used';
 	}
 
 	return out;
