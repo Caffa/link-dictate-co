@@ -27,7 +27,27 @@ export function targetMatchesFilters(target: string, filters: string[]): boolean
 	return filters.some((filter) => haystack.includes(filter) || basename.includes(filter));
 }
 
-export function filterAliases(input: unknown[] | null | undefined, target: string): string[] {
+export function extractUsedAliases(originals: string[]): Set<string> {
+	const used = new Set<string>();
+	for (const original of originals) {
+		if (typeof original !== 'string') continue;
+		const pipeIdx = original.indexOf('|');
+		if (pipeIdx === -1) continue;
+		const endIdx = original.lastIndexOf(']]');
+		const rawAlias = endIdx === -1 ? original.slice(pipeIdx + 1) : original.slice(pipeIdx + 1, endIdx);
+		const alias = rawAlias.trim();
+		if (alias) {
+			used.add(alias.toLowerCase());
+		}
+	}
+	return used;
+}
+
+export function filterAliases(
+	input: unknown[] | null | undefined,
+	target: string,
+	usedAliases?: Set<string>,
+): string[] {
 	if (!input) return [];
 	const basename = basenameOfTarget(target).toLowerCase();
 	const seen = new Set<string>();
@@ -38,6 +58,7 @@ export function filterAliases(input: unknown[] | null | undefined, target: strin
 		if (!alias) continue;
 		const key = alias.toLowerCase();
 		if (key === basename || seen.has(key)) continue;
+		if (usedAliases && !usedAliases.has(key)) continue;
 		seen.add(key);
 		out.push(alias);
 	}

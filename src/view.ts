@@ -11,6 +11,7 @@ import { currentNoteLinks, frequentLinks, sameFolderLinks, type FrequentLink } f
 import { formatInsertToken } from './token';
 import {
 	basenameOfTarget,
+	extractUsedAliases,
 	filterAliases,
 	groupCollisions,
 	mergeCurrentAndFolderRows,
@@ -119,6 +120,7 @@ export class LinkDictateCoView extends ItemView {
 		const colorContext = prepareColorContext(this.app);
 		const colorCache = new Map<string, string>();
 		const filters = parseLinkFilters(settings.linkFilters);
+		const usedAliases = this.gatherUsedAliases(currentPath, resolved);
 
 		const sameFolderUnfiltered =
 			settings.showSameFolder && activeFile
@@ -142,6 +144,7 @@ export class LinkDictateCoView extends ItemView {
 				merged,
 				colorContext,
 				colorCache,
+				usedAliases,
 			);
 			this.sameFolderHasLinks = false;
 		} else {
@@ -154,6 +157,7 @@ export class LinkDictateCoView extends ItemView {
 					.map((target) => ({ target, count: 0, fromCurrent: true })),
 				colorContext,
 				colorCache,
+				usedAliases,
 			);
 
 			this.sameFolderHasLinks = this.renderSection(
@@ -163,6 +167,7 @@ export class LinkDictateCoView extends ItemView {
 				sameFolderFiltered.map((link) => ({ ...link, fromCurrent: false })),
 				colorContext,
 				colorCache,
+				usedAliases,
 			);
 		}
 
@@ -179,10 +184,38 @@ export class LinkDictateCoView extends ItemView {
 					.map((link) => ({ ...link, fromCurrent: false })),
 				colorContext,
 				colorCache,
+				usedAliases,
 			);
 		}
 
 		this.updateEmptyHint();
+	}
+
+	private gatherUsedAliases(
+		currentPath: string,
+		resolved: Record<string, Record<string, number>>,
+	): Set<string> {
+		if (!currentPath) {
+			return new Set();
+		}
+		const currentFolder = parentDirOf(currentPath);
+		const paths = [currentPath];
+		for (const path of Object.keys(resolved)) {
+			if (path !== currentPath && parentDirOf(path) === currentFolder) {
+				paths.push(path);
+			}
+		}
+		const originals: string[] = [];
+		for (const path of paths) {
+			const cache = this.app.metadataCache.getCache(path);
+			if (!cache?.links) continue;
+			for (const link of cache.links) {
+				if (link.original) {
+					originals.push(link.original);
+				}
+			}
+		}
+		return extractUsedAliases(originals);
 	}
 
 	private updateEmptyHint(): void {
@@ -203,6 +236,7 @@ export class LinkDictateCoView extends ItemView {
 		rows: MergedRow[],
 		colorContext: ColorContext | null,
 		colorCache: Map<string, string>,
+		usedAliases: Set<string>,
 	): boolean {
 		section.empty();
 		if (!enabled) {
@@ -230,7 +264,7 @@ export class LinkDictateCoView extends ItemView {
 
 		for (const row of rows) {
 			const { target, count, fromCurrent } = row;
-			const aliases = this.getAliases(target);
+			const aliases = this.getAliases(target, usedAliases);
 			const firstAlias = aliases[0] ?? null;
 			const rowEl = list.createDiv({ cls: 'link-dictate-co-row' });
 			if (fromCurrent) {
@@ -282,10 +316,11 @@ export class LinkDictateCoView extends ItemView {
 		return true;
 	}
 
-	private getAliases(target: string): string[] {
+	private getAliases(target: string, usedAliases: Set<string>): string[] {
 		const cache = this.app.metadataCache.getCache(target);
 		const raw = cache?.frontmatter ? parseFrontMatterAliases(cache.frontmatter) : null;
-		return filterAliases(raw, target);
+		const used = this.plugin.settings.aliasMode === 'used' ? usedAliases : undefined;
+		return filterAliases(raw, target, used);
 	}
 
 	private getCachedColor(

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	basenameOfTarget,
+	extractUsedAliases,
 	filterAliases,
 	groupCollisions,
 	mergeCurrentAndFolderRows,
@@ -85,6 +86,47 @@ describe('filterAliases', () => {
 
 	it('drops empty or non-string aliases', () => {
 		expect(filterAliases(['Ok', '', null, 'Ok'], 'Note.md')).toEqual(['Ok']);
+	});
+});
+
+describe('extractUsedAliases', () => {
+	it('extracts aliases from piped wikilinks', () => {
+		expect(extractUsedAliases(['[[Target|Alias]]', '[[Other|Second]]'])).toEqual(
+			new Set(['alias', 'second']),
+		);
+	});
+
+	it('ignores links without a pipe', () => {
+		expect(extractUsedAliases(['[[Target]]', '[[Other|Alias]]'])).toEqual(new Set(['alias']));
+	});
+
+	it('handles multi-pipe originals by taking after first pipe to last ]] ', () => {
+		expect(extractUsedAliases(['[[Path|Sub|alias]]'])).toEqual(new Set(['sub|alias']));
+	});
+
+	it('trims aliases and drops empty ones', () => {
+		expect(extractUsedAliases(['[[T|  spaced  ]]', '[[T|]]'])).toEqual(new Set(['spaced']));
+	});
+
+	it('returns an empty set for non-string values', () => {
+		expect(extractUsedAliases([null, undefined, 123] as unknown as string[])).toEqual(new Set());
+	});
+});
+
+describe('filterAliases with usedAliases', () => {
+	it('returns only aliases in the used set when usedAliases is provided', () => {
+		expect(filterAliases(['Alpha', 'Beta', 'Gamma'], 'Note.md', new Set(['beta']))).toEqual(['Beta']);
+	});
+
+	it('still skips aliases matching the basename even when in used set', () => {
+		expect(filterAliases(['Note', 'Alias'], 'Note.md', new Set(['note', 'alias']))).toEqual(['Alias']);
+	});
+
+	it('dedupes aliases within the used set', () => {
+		expect(filterAliases(['One', 'one', 'Two'], 'Note.md', new Set(['one', 'two']))).toEqual([
+			'One',
+			'Two',
+		]);
 	});
 });
 
