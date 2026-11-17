@@ -14,11 +14,11 @@ discord_channel: https://discord.com/channels/1486966847810043924/15718442636612
 
 ## Where it stands
 
-- Latest release 0.5.1: the current-note and same-folder sections merge into one when both toggles are on (current-note links prioritized by folder count, `fromCurrent` marker); alias display mode setting `all` | `used` (default `used` — only aliases actually used as `[[Target|Alias]]` in the current note or same folder, via a metadataCache links scan); clickable alias hover styling; filter-trimmed display names (`trimFilterFromBasename`, display-only). 0.5.1 fixed a review-caught regression where same-folder-only panels showed the "No links yet" hint under a populated list.
-- Link Colorer integration migrated to the official public API (`src/linkcolor-api.ts`) introduced in link-colorer 2.1.0. The plugin defensively polls `app.plugins.plugins['link-colorer']?.getApi()` and `window.linkColorerApi`, validates the API shape (`version === 1`, `isReady`, `getColorForLink`, `getColorsForLinks`), and asks the host for colors directly instead of replicating its hash/palette pipeline. Per-link text is prepared as the target path with `.md` stripped and URI-decoded; the host handles its own normalization and theme-aware slot logic. Colors are applied to the main row span and alias sub-rows with the same four CSS properties as before. Refresh is triggered by the host's `link-colorer:recolor` workspace event and Obsidian's `css-change`; no onRecolor subscription is required because the workspace event is the maintained surface. User context: link-colorer is installed-but-disabled in Novel-Writing (only ZettelPublish has it enabled) and lazy-plugins delays plugin startup 5–15 s, so panel colors appear only after lazy load + panel refresh.
+- Latest release 0.6.0: the 809-line reverse-engineered link-colorer replica (`colorer.ts`, `colorer-palettes.ts`, 27 pipeline tests) is gone; color integration now goes through Link Colorer 2.1.0's official public plugin API via `src/linkcolor-api.ts`. A `pickApi` selector resolves `app.plugins.plugins['link-colorer']?.getApi()` or `window.linkColorerApi`, guarded on `version === 1` and `isReady`, and `getColorForLink` is called per panel refresh — panel colors exactly match already-rendered links by contract, misses recompute deterministically, and the API is re-resolved every refresh so lazy-load stays resilient. Per-link text is prepared as the target path with `.md` stripped and URI-decoded; the host handles its own normalization and theme-aware slot logic. Colors are applied to the main row span and alias sub-rows with the same four CSS properties as before. Refresh triggers unchanged: the host's `link-colorer:recolor` workspace event plus Obsidian's `css-change` (no onRecolor subscription needed — the workspace event is the maintained surface). Post-migration cleanup: pickApi extracted and unit-tested, throttled debug logging for incompatible API versions.
+- The 0.5.x panel UX is intact: merged current-note + same-folder section when both toggles are on (`fromCurrent` priority), alias display mode `all` | `used` (default `used`, via a metadataCache links scan), clickable alias hover styling, and filter-trimmed display names (`trimFilterFromBasename`); 0.5.1 fixed a review-caught regression where same-folder-only panels showed the "No links yet" hint under a populated list.
 - Core flow unchanged: row click POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling; per-section toggles, same-folder aggregation (v0.2.x), basename display with collision suffixes (v0.3.x), and the v0.4.0 link filter (applied after ranking, before alias/collision/color treatment) all intact.
 - 111 bun tests pass, build/typecheck green; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault.
-- Unverified in Obsidian: all 0.5.x UI changes at runtime; also the color match against live link-colorer rendering and the Handy Phase-1 API; "relevant links" (2-hop) section still future.
+- Unverified in Obsidian: the 0.6.0 color contract against live rendering (panel vs reading view in ZettelPublish; link-colorer is installed-but-disabled in Novel-Writing — only ZettelPublish has it enabled — and lazy-plugins delays plugin startup 5–15 s, so colors appear only after lazy load + panel refresh), the 0.5.x UI changes, and the Handy Phase-1 API; "relevant links" (2-hop) section still future.
 
 ## How to run
 
@@ -36,10 +36,18 @@ bun run test
 - `src/handy-client.ts` is transport-agnostic (injected `Transport`) so tests never touch the real Handy app.
 - `src/transport.ts` wires Obsidian's `requestUrl` for the production transport.
 - `src/links.ts`, `src/token.ts`, and `src/settings-core.ts` are pure helpers with full test coverage.
-- `src/display.ts` holds basename/collision/alias row helpers; `src/linkcolor-api.ts` wraps the official Link Colorer public API for panel colors.
+- `src/display.ts` holds basename/collision/alias row helpers; `src/linkcolor-api.ts` wraps the official Link Colorer public API (`pickApi` selector) for panel colors.
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-17 — v0.6.0: official Link Colorer API replaces the color replica
+
+v0.6.0 deleted the 809-line reverse-engineered color pipeline (`colorer.ts`, `colorer-palettes.ts`, and its 27 pipeline tests) and replaced it with Link Colorer 2.1.0's official public plugin API: the new ~57-line `src/linkcolor-api.ts` resolves the API defensively (`pickApi` picks `getApi()` / `window.linkColorerApi`), guards on `version === 1` and `isReady`, and calls `getColorForLink` per panel refresh, so panel colors exactly match already-rendered links by contract — misses recompute deterministically and the API is re-resolved every refresh, keeping lazy-load resilient. The `link-colorer:recolor` workspace event and `css-change` refresh triggers are retained; no onRecolor subscription is needed. A post-migration review pass extracted the `pickApi` selector into its own tested unit, added throttled debug logging for incompatible API versions, and fixed the blueprint test count (909f159, 899d0f5, c51f3c7). 111 bun tests pass; released 0.6.0 (https://github.com/Caffa/link-dictate-co/releases/tag/0.6.0) and deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`.
+
+Next: runtime-verify inside Obsidian — panel colors vs reading view in ZettelPublish, including lazy-load timing.
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-17 — v0.5.0 + v0.5.1: merged panel section, alias display mode, colorer re-verified
 
