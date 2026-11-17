@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { basenameOfTarget, groupCollisions, parentDirOf } from '../src/display';
+import { basenameOfTarget, filterAliases, groupCollisions, parentDirOf } from '../src/display';
 
 describe('basenameOfTarget', () => {
 	it('strips .md and returns the last segment', () => {
@@ -59,5 +59,23 @@ describe('groupCollisions', () => {
 	it('uses exact basename match, not lowercase', () => {
 		const paths = ['Folder/Foo.md', 'Folder/foo.md'];
 		expect(groupCollisions(paths)).toEqual(new Set());
+	});
+});
+
+describe('filterAliases', () => {
+	it('returns aliases unchanged when none match the basename', () => {
+		expect(filterAliases(['One', 'Two'], 'Note.md')).toEqual(['One', 'Two']);
+	});
+
+	it('skips an alias identical (case-insensitive) to the note basename', () => {
+		expect(filterAliases(['note', 'Alias'], 'folder/Note.md')).toEqual(['Alias']);
+	});
+
+	it('dedupes aliases case-insensitively and keeps the first occurrence', () => {
+		expect(filterAliases(['Alpha', 'alpha', 'Beta'], 'Note.md')).toEqual(['Alpha', 'Beta']);
+	});
+
+	it('drops empty or non-string aliases', () => {
+		expect(filterAliases(['Ok', '', null, 'Ok'], 'Note.md')).toEqual(['Ok']);
 	});
 });

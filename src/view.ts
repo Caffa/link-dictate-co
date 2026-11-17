@@ -9,7 +9,7 @@ import { HandyClient } from './handy-client';
 import { requestUrlTransport } from './transport';
 import { currentNoteLinks, frequentLinks, sameFolderLinks, type FrequentLink } from './links';
 import { formatInsertToken } from './token';
-import { basenameOfTarget, groupCollisions, parentDirOf } from './display';
+import { basenameOfTarget, filterAliases, groupCollisions, parentDirOf } from './display';
 import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
 
 export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
@@ -206,16 +206,16 @@ export class LinkDictateCoView extends ItemView {
 			const aliases = this.getAliases(target);
 			const firstAlias = aliases[0] ?? null;
 			const row = list.createDiv({ cls: 'link-dictate-co-row' });
-			row.dataset.target = target;
+			const base = basenameOfTarget(target);
 
 			const main = row.createDiv({ cls: 'link-dictate-co-main' });
 			const wrap = main.createDiv({ cls: 'link-dictate-co-target-wrap' });
 			const targetSpan = wrap.createSpan({
 				cls: 'link-dictate-co-target',
-				text: basenameOfTarget(target),
+				text: base,
 			});
 
-			if (collisions.has(basenameOfTarget(target))) {
+			if (collisions.has(base)) {
 				const folder = parentDirOf(target);
 				if (folder) {
 					wrap.createSpan({ cls: 'link-dictate-co-folder', text: folder });
@@ -256,8 +256,7 @@ export class LinkDictateCoView extends ItemView {
 	private getAliases(target: string): string[] {
 		const cache = this.app.metadataCache.getCache(target);
 		const raw = cache?.frontmatter ? parseFrontMatterAliases(cache.frontmatter) : null;
-		if (!raw) return [];
-		return Array.isArray(raw) ? raw : [raw];
+		return filterAliases(raw, target);
 	}
 
 	private getCachedColor(
