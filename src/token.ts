@@ -4,10 +4,12 @@ export function formatInsertToken(
 	target: string,
 	alias: string | null | undefined,
 	style: InsertStyle,
+	forceAlias = false,
 ): string {
 	const t = target.trim();
-	if (style === 'alias' && alias) {
-		return `[[${t}|${alias.trim()}]]`;
+	const a = alias?.trim();
+	if (a && (forceAlias || style === 'alias')) {
+		return `[[${t}|${a}]]`;
 	}
 	return `[[${t}]]`;
 }

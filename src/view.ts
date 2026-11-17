@@ -245,7 +245,7 @@ export class LinkDictateCoView extends ItemView {
 					aliasRow.style.cssText = styleForColor(color);
 				}
 				aliasRow.addEventListener('click', () => {
-					void this.handleInsert(target, alias);
+					void this.handleInsert(target, alias, true);
 				});
 			}
 		}
@@ -275,8 +275,8 @@ export class LinkDictateCoView extends ItemView {
 		return color;
 	}
 
-	private async handleInsert(target: string, alias: string | null = null): Promise<void> {
-		const token = formatInsertToken(target, alias, this.plugin.settings.insertStyle);
+	private async handleInsert(target: string, alias: string | null = null, forceAlias = false): Promise<void> {
+		const token = formatInsertToken(target, alias, this.plugin.settings.insertStyle, forceAlias);
 		const result = await this.handyClient().insert(token);
 
 		switch (result) {

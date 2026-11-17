@@ -18,4 +18,12 @@ describe('formatInsertToken', () => {
 		expect(formatInsertToken('  Foo  ', '  Bar  ', 'alias')).toBe('[[Foo|Bar]]');
 		expect(formatInsertToken('  Foo  ', null, 'wikilink')).toBe('[[Foo]]');
 	});
+
+	it('forces alias form when forceAlias is true even in wikilink style', () => {
+		expect(formatInsertToken('Foo', 'Bar', 'wikilink', true)).toBe('[[Foo|Bar]]');
+	});
+
+	it('falls back to wikilink when forceAlias is true but alias is null', () => {
+		expect(formatInsertToken('Foo', null, 'wikilink', true)).toBe('[[Foo]]');
+	});
 });
