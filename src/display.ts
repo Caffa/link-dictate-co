@@ -1,3 +1,5 @@
+import type { FrequentLink } from './links';
+
 export function basenameOfTarget(path: string): string {
 	const withoutMd = path.endsWith('.md') ? path.slice(0, -3) : path;
 	const slash = withoutMd.lastIndexOf('/');
@@ -58,4 +60,39 @@ export function groupCollisions(paths: string[]): Set<string> {
 	}
 
 	return collisions;
+}
+
+export interface MergedRow {
+	target: string;
+	count: number;
+	fromCurrent: boolean;
+}
+
+export function mergeCurrentAndFolderRows(
+	currentTargets: string[],
+	folderRows: FrequentLink[],
+): MergedRow[] {
+	const folderCount = new Map<string, number>();
+	for (const { target, count } of folderRows) {
+		folderCount.set(target, count);
+	}
+
+	const currentSet = new Set(currentTargets);
+	const currentPart: MergedRow[] = currentTargets.map((target) => ({
+		target,
+		count: folderCount.get(target) ?? 0,
+		fromCurrent: true,
+	}));
+	currentPart.sort((a, b) => {
+		if (b.count !== a.count) {
+			return b.count - a.count;
+		}
+		return basenameOfTarget(a.target).localeCompare(basenameOfTarget(b.target));
+	});
+
+	const folderOnly: MergedRow[] = folderRows
+		.filter((row) => !currentSet.has(row.target))
+		.map((row) => ({ target: row.target, count: row.count, fromCurrent: false }));
+
+	return [...currentPart, ...folderOnly];
 }

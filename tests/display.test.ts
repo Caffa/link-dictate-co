@@ -3,6 +3,7 @@ import {
 	basenameOfTarget,
 	filterAliases,
 	groupCollisions,
+	mergeCurrentAndFolderRows,
 	parentDirOf,
 	parseLinkFilters,
 	targetMatchesFilters,
@@ -124,5 +125,51 @@ describe('targetMatchesFilters', () => {
 
 	it('matches any of multiple filters', () => {
 		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', ['places/', 'char -'])).toBe(true);
+	});
+});
+
+describe('mergeCurrentAndFolderRows', () => {
+	it('puts current-note links first with folder counts, then folder-only links', () => {
+		const current = ['Zeta.md', 'Alpha.md', 'Beta.md'];
+		const folder = [
+			{ target: 'Beta.md', count: 5 },
+			{ target: 'Gamma.md', count: 4 },
+			{ target: 'Alpha.md', count: 4 },
+		];
+		expect(mergeCurrentAndFolderRows(current, folder)).toEqual([
+			{ target: 'Beta.md', count: 5, fromCurrent: true },
+			{ target: 'Alpha.md', count: 4, fromCurrent: true },
+			{ target: 'Zeta.md', count: 0, fromCurrent: true },
+			{ target: 'Gamma.md', count: 4, fromCurrent: false },
+		]);
+	});
+
+	it('sorts current-note links by folder count desc then basename alpha', () => {
+		const current = ['B.md', 'A.md'];
+		const folder = [
+			{ target: 'A.md', count: 2 },
+			{ target: 'B.md', count: 2 },
+		];
+		const result = mergeCurrentAndFolderRows(current, folder);
+		expect(result.map((r) => r.target)).toEqual(['A.md', 'B.md']);
+		expect(result.every((r) => r.fromCurrent)).toBe(true);
+	});
+
+	it('returns only folder rows when current list is empty', () => {
+		const folder = [
+			{ target: 'Beta.md', count: 2 },
+			{ target: 'Alpha.md', count: 1 },
+		];
+		expect(mergeCurrentAndFolderRows([], folder)).toEqual([
+			{ target: 'Beta.md', count: 2, fromCurrent: false },
+			{ target: 'Alpha.md', count: 1, fromCurrent: false },
+		]);
+	});
+
+	it('returns only current rows when folder list is empty', () => {
+		expect(mergeCurrentAndFolderRows(['A.md', 'B.md'], [])).toEqual([
+			{ target: 'A.md', count: 0, fromCurrent: true },
+			{ target: 'B.md', count: 0, fromCurrent: true },
+		]);
 	});
 });

@@ -13,9 +13,11 @@ import {
 	basenameOfTarget,
 	filterAliases,
 	groupCollisions,
+	mergeCurrentAndFolderRows,
 	parentDirOf,
 	parseLinkFilters,
 	targetMatchesFilters,
+	type MergedRow,
 } from './display';
 import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
 
@@ -118,35 +120,51 @@ export class LinkDictateCoView extends ItemView {
 		const colorCache = new Map<string, string>();
 		const filters = parseLinkFilters(settings.linkFilters);
 
-		this.currentHasLinks = this.renderSection(
-			this.currentSectionEl,
-			settings.showCurrentNote,
-			'Current note',
-			currentNoteLinks(resolved, currentPath).filter((target) =>
-				targetMatchesFilters(target, filters),
-			),
-			false,
-			[],
-			colorContext,
-			colorCache,
-		);
-
-		const sameFolder =
+		const sameFolderUnfiltered =
 			settings.showSameFolder && activeFile
 				? sameFolderLinks(resolved, currentPath, VAULT_LINK_LIMIT)
 				: [];
-		this.sameFolderHasLinks = this.renderSection(
-			this.sameFolderSectionEl,
-			settings.showSameFolder,
-			'Same folder',
-			sameFolder
-				.map((link) => link.target)
-				.filter((target) => targetMatchesFilters(target, filters)),
-			true,
-			sameFolder,
-			colorContext,
-			colorCache,
+		const sameFolderFiltered = sameFolderUnfiltered.filter((link) =>
+			targetMatchesFilters(link.target, filters),
 		);
+
+		if (settings.showCurrentNote && settings.showSameFolder) {
+			this.sameFolderSectionEl.empty();
+			this.sameFolderSectionEl.style.display = 'none';
+			const currentTargets = currentNoteLinks(resolved, currentPath).filter((target) =>
+				targetMatchesFilters(target, filters),
+			);
+			const merged = mergeCurrentAndFolderRows(currentTargets, sameFolderFiltered);
+			this.currentHasLinks = this.renderSection(
+				this.currentSectionEl,
+				true,
+				'Current note & folder',
+				merged,
+				colorContext,
+				colorCache,
+			);
+			this.sameFolderHasLinks = false;
+		} else {
+			this.currentHasLinks = this.renderSection(
+				this.currentSectionEl,
+				settings.showCurrentNote,
+				'Current note',
+				currentNoteLinks(resolved, currentPath)
+					.filter((target) => targetMatchesFilters(target, filters))
+					.map((target) => ({ target, count: 0, fromCurrent: true })),
+				colorContext,
+				colorCache,
+			);
+
+			this.sameFolderHasLinks = this.renderSection(
+				this.sameFolderSectionEl,
+				settings.showSameFolder,
+				'Same folder',
+				sameFolderFiltered.map((link) => ({ ...link, fromCurrent: false })),
+				colorContext,
+				colorCache,
+			);
+		}
 
 		if (!currentOnly) {
 			const frequent = settings.showVaultWide
@@ -157,10 +175,8 @@ export class LinkDictateCoView extends ItemView {
 				settings.showVaultWide,
 				'Vault-wide frequent links',
 				frequent
-					.map((link) => link.target)
-					.filter((target) => targetMatchesFilters(target, filters)),
-				true,
-				frequent,
+					.filter((link) => targetMatchesFilters(link.target, filters))
+					.map((link) => ({ ...link, fromCurrent: false })),
 				colorContext,
 				colorCache,
 			);
@@ -171,14 +187,11 @@ export class LinkDictateCoView extends ItemView {
 
 	private updateEmptyHint(): void {
 		const { settings } = this.plugin;
-		const enabledSections = [
-			settings.showCurrentNote,
-			settings.showSameFolder,
-			settings.showVaultWide,
-		].filter(Boolean).length;
+		const enabledSections =
+			((settings.showCurrentNote || settings.showSameFolder) ? 1 : 0) +
+			(settings.showVaultWide ? 1 : 0);
 		const hasLinks =
-			(settings.showCurrentNote && this.currentHasLinks) ||
-			(settings.showSameFolder && this.sameFolderHasLinks) ||
+			((settings.showCurrentNote || settings.showSameFolder) && this.currentHasLinks) ||
 			(settings.showVaultWide && this.vaultHasLinks);
 		this.emptyHintEl.style.display = enabledSections > 0 && !hasLinks ? '' : 'none';
 	}
@@ -187,9 +200,7 @@ export class LinkDictateCoView extends ItemView {
 		section: HTMLElement,
 		enabled: boolean,
 		title: string,
-		targets: string[],
-		showCounts: boolean,
-		counts: FrequentLink[],
+		rows: MergedRow[],
 		colorContext: ColorContext | null,
 		colorCache: Map<string, string>,
 	): boolean {
@@ -206,7 +217,7 @@ export class LinkDictateCoView extends ItemView {
 
 		const list = section.createDiv({ cls: 'link-dictate-co-list' });
 
-		if (targets.length === 0) {
+		if (rows.length === 0) {
 			list.createDiv({
 				cls: 'link-dictate-co-empty',
 				text: 'No links available',
@@ -214,15 +225,20 @@ export class LinkDictateCoView extends ItemView {
 			return false;
 		}
 
+		const targets = rows.map((row) => row.target);
 		const collisions = groupCollisions(targets);
 
-		for (const target of targets) {
+		for (const row of rows) {
+			const { target, count, fromCurrent } = row;
 			const aliases = this.getAliases(target);
 			const firstAlias = aliases[0] ?? null;
-			const row = list.createDiv({ cls: 'link-dictate-co-row' });
+			const rowEl = list.createDiv({ cls: 'link-dictate-co-row' });
+			if (fromCurrent) {
+				rowEl.addClass('link-dictate-co-from-current');
+			}
 			const base = basenameOfTarget(target);
 
-			const main = row.createDiv({ cls: 'link-dictate-co-main' });
+			const main = rowEl.createDiv({ cls: 'link-dictate-co-main' });
 			const wrap = main.createDiv({ cls: 'link-dictate-co-target-wrap' });
 			const targetSpan = wrap.createSpan({
 				cls: 'link-dictate-co-target',
@@ -236,8 +252,7 @@ export class LinkDictateCoView extends ItemView {
 				}
 			}
 
-			if (showCounts) {
-				const count = counts.find((c) => c.target === target)?.count ?? 0;
+			if (count > 0) {
 				main.createSpan({ cls: 'link-dictate-co-count', text: String(count) });
 			}
 
@@ -251,7 +266,7 @@ export class LinkDictateCoView extends ItemView {
 			});
 
 			for (const alias of aliases) {
-				const aliasRow = row.createDiv({
+				const aliasRow = rowEl.createDiv({
 					cls: 'link-dictate-co-alias-row',
 					text: alias,
 				});
