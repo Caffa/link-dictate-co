@@ -8,12 +8,13 @@ Blueprint conventions:
 title: Link Dictate Co
 one_liner: Obsidian sidebar plugin that inserts vault links into the Handy voice dictation app over a loopback HTTP API.
 status: active
-updated: 2026-11-16
+updated: 2026-11-17
 discord_channel: https://discord.com/channels/1486966847810043924/1571844263661277194
 ---
 
 ## Where it stands
 
+- v0.3.0 released: panel rows now show the note basename instead of the full path, display a faint parent-folder suffix when basenames collide inside a section list, and expose nested alias sub-rows under each link. The alias insert-style now works via frontmatter aliases. Link Colorer integration replicates the live plugin's color pipeline (hash, prefix stripping, least-used palette slot, HSL jitter) and applies matching inline colors to main rows and aliases; panel refreshes on `css-change`.
 - v0.2.1 released: right-sidebar sections are individually toggleable (showCurrentNote/showSameFolder/showVaultWide, all default on) and there's a new "Links in same folder" panel section — exact-directory aggregation ranked by count, refreshed on tab switch.
 - Same-folder aggregation counts links only from files in the active note's directory, excluding the note itself; the no-active-file edge case (vault-root links leaking in) is fixed.
 - Performance checked at scale: vault-wide top-25 aggregation is 6–12 ms at the 13k-file Novel-Writing vault — the toggles are a workflow choice, not a perf one.
@@ -39,6 +40,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-17 — v0.3.0: basename display, aliases, and Link Colorer colors
+
+Redesigned panel rows to show basenames with `.md` stripped, added a muted parent-folder collision suffix when a section list contains multiple targets with the same basename, and added nested alias sub-rows that insert `[[Target|Alias]]` on click. The main row now uses the first frontmatter alias when `insertStyle` is `alias`, so the setting is no longer inert. Added Link Colorer integration (`src/colorer.ts` + `src/colorer-palettes.ts`) that replicates the live plugin's djb2-variant hash, recursive prefix stripping, least-used palette slot, and HSL jitter; it defensively reads the link-colorer instance's settings and usage stats, and bails to the default panel text color if anything is missing. Registered the `css-change` workspace event to refresh the panel when the user re-rolls colors. Added `src/display.ts` helpers and tests; total test count is now 65, with `bun run build` and `bun run typecheck` green. Released 0.3.0 and deployed to Novel-Writing, ZettelPublish, and Journal vaults via `sendToNovelVault.sh`.
+
+Next: runtime-test the new row display and color integration inside Obsidian against the user's actual Link Colorer setup; verify the replicated colors match the reading-view colors for a few sample notes.
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-16 — v0.2.0/v0.2.1: per-section toggles + same-folder links
 
