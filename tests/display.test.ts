@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'bun:test';
-import { basenameOfTarget, filterAliases, groupCollisions, parentDirOf } from '../src/display';
+import {
+	basenameOfTarget,
+	filterAliases,
+	groupCollisions,
+	parentDirOf,
+	parseLinkFilters,
+	targetMatchesFilters,
+} from '../src/display';
 
 describe('basenameOfTarget', () => {
 	it('strips .md and returns the last segment', () => {
@@ -77,5 +84,45 @@ describe('filterAliases', () => {
 
 	it('drops empty or non-string aliases', () => {
 		expect(filterAliases(['Ok', '', null, 'Ok'], 'Note.md')).toEqual(['Ok']);
+	});
+});
+
+describe('parseLinkFilters', () => {
+	it('splits on comma, trims, drops empties, and lowercases', () => {
+		expect(parseLinkFilters('Char - , Worldbuilding/')).toEqual(['char -', 'worldbuilding/']);
+	});
+
+	it('returns an empty array for an empty string', () => {
+		expect(parseLinkFilters('')).toEqual([]);
+	});
+
+	it('returns an empty array for a whitespace-only string', () => {
+		expect(parseLinkFilters('   , ,  ')).toEqual([]);
+	});
+
+	it('handles a single filter', () => {
+		expect(parseLinkFilters('Char - ')).toEqual(['char -']);
+	});
+});
+
+describe('targetMatchesFilters', () => {
+	it('returns true when empty filters', () => {
+		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', [])).toBe(true);
+	});
+
+	it('matches case-insensitively on basename', () => {
+		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', ['char -'])).toBe(true);
+	});
+
+	it('matches on full path', () => {
+		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', ['worldbuilding/'])).toBe(true);
+	});
+
+	it('returns false when neither basename nor path matches', () => {
+		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', ['places/'])).toBe(false);
+	});
+
+	it('matches any of multiple filters', () => {
+		expect(targetMatchesFilters('Worldbuilding/Chars/Char - B.md', ['places/', 'char -'])).toBe(true);
 	});
 });

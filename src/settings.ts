@@ -69,6 +69,22 @@ export class LinkDictateCoSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName('Link filter')
+			.setDesc(
+				'Comma-separated. Only links whose note name (=display name) or full path contains one of these are shown. Leave empty to show all links.',
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder('Char - , Worldbuilding/')
+					.setValue(this.plugin.settings.linkFilters)
+					.onChange(async (value) => {
+						this.plugin.settings.linkFilters = value;
+						await this.plugin.saveData(this.plugin.settings);
+						this.plugin.refreshView();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName('Panel sections')
 			.setHeading();
 

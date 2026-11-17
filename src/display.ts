@@ -10,6 +10,21 @@ export function parentDirOf(path: string): string {
 	return slash === -1 ? '' : withoutMd.slice(0, slash);
 }
 
+export function parseLinkFilters(raw: string): string[] {
+	return raw
+		.split(',')
+		.map((part) => part.trim())
+		.filter((part) => part.length > 0)
+		.map((part) => part.toLowerCase());
+}
+
+export function targetMatchesFilters(target: string, filters: string[]): boolean {
+	if (filters.length === 0) return true;
+	const haystack = target.toLowerCase();
+	const basename = basenameOfTarget(target).toLowerCase();
+	return filters.some((filter) => haystack.includes(filter) || basename.includes(filter));
+}
+
 export function filterAliases(input: unknown[] | null | undefined, target: string): string[] {
 	if (!input) return [];
 	const basename = basenameOfTarget(target).toLowerCase();

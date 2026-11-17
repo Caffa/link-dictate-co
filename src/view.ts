@@ -9,7 +9,14 @@ import { HandyClient } from './handy-client';
 import { requestUrlTransport } from './transport';
 import { currentNoteLinks, frequentLinks, sameFolderLinks, type FrequentLink } from './links';
 import { formatInsertToken } from './token';
-import { basenameOfTarget, filterAliases, groupCollisions, parentDirOf } from './display';
+import {
+	basenameOfTarget,
+	filterAliases,
+	groupCollisions,
+	parentDirOf,
+	parseLinkFilters,
+	targetMatchesFilters,
+} from './display';
 import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
 
 export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
@@ -109,12 +116,15 @@ export class LinkDictateCoView extends ItemView {
 		const { settings } = this.plugin;
 		const colorContext = prepareColorContext(this.app);
 		const colorCache = new Map<string, string>();
+		const filters = parseLinkFilters(settings.linkFilters);
 
 		this.currentHasLinks = this.renderSection(
 			this.currentSectionEl,
 			settings.showCurrentNote,
 			'Current note',
-			currentNoteLinks(resolved, currentPath),
+			currentNoteLinks(resolved, currentPath).filter((target) =>
+				targetMatchesFilters(target, filters),
+			),
 			false,
 			[],
 			colorContext,
@@ -129,7 +139,9 @@ export class LinkDictateCoView extends ItemView {
 			this.sameFolderSectionEl,
 			settings.showSameFolder,
 			'Same folder',
-			sameFolder.map((link) => link.target),
+			sameFolder
+				.map((link) => link.target)
+				.filter((target) => targetMatchesFilters(target, filters)),
 			true,
 			sameFolder,
 			colorContext,
@@ -144,7 +156,9 @@ export class LinkDictateCoView extends ItemView {
 				this.vaultSectionEl,
 				settings.showVaultWide,
 				'Vault-wide frequent links',
-				frequent.map((link) => link.target),
+				frequent
+					.map((link) => link.target)
+					.filter((target) => targetMatchesFilters(target, filters)),
 				true,
 				frequent,
 				colorContext,

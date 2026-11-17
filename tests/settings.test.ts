@@ -20,6 +20,7 @@ describe('mergeSettings', () => {
 			showCurrentNote: true,
 			showSameFolder: true,
 			showVaultWide: true,
+			linkFilters: '',
 		});
 		expect(result).not.toHaveProperty('extra');
 	});
@@ -58,6 +59,26 @@ describe('mergeSettings', () => {
 			expect(mergeSettings({ showSameFolder: 1 }).showSameFolder).toBe(true);
 			expect(mergeSettings({ showVaultWide: null }).showVaultWide).toBe(true);
 			expect(mergeSettings({ showCurrentNote: undefined }).showCurrentNote).toBe(true);
+		});
+	});
+
+	describe('linkFilters', () => {
+		it('defaults to an empty string', () => {
+			expect(mergeSettings({}).linkFilters).toBe('');
+			expect(DEFAULT_SETTINGS.linkFilters).toBe('');
+		});
+
+		it('preserves a valid string', () => {
+			expect(mergeSettings({ linkFilters: 'Char - , Worldbuilding/' }).linkFilters).toBe(
+				'Char - , Worldbuilding/',
+			);
+		});
+
+		it('coerces non-string values to an empty string', () => {
+			expect(mergeSettings({ linkFilters: 123 }).linkFilters).toBe('');
+			expect(mergeSettings({ linkFilters: true }).linkFilters).toBe('');
+			expect(mergeSettings({ linkFilters: null }).linkFilters).toBe('');
+			expect(mergeSettings({ linkFilters: ['Char - '] }).linkFilters).toBe('');
 		});
 	});
 });

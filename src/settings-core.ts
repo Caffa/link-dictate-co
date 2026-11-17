@@ -5,6 +5,7 @@ export interface LinkDictateCoSettings {
 	showCurrentNote: boolean;
 	showSameFolder: boolean;
 	showVaultWide: boolean;
+	linkFilters: string;
 }
 
 export const DEFAULT_SETTINGS: LinkDictateCoSettings = {
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: LinkDictateCoSettings = {
 	showCurrentNote: true,
 	showSameFolder: true,
 	showVaultWide: true,
+	linkFilters: '',
 };
 
 export function mergeSettings(input: unknown): LinkDictateCoSettings {
@@ -46,6 +48,12 @@ export function mergeSettings(input: unknown): LinkDictateCoSettings {
 		if (key in raw && typeof raw[key] === 'boolean') {
 			out[key] = raw[key];
 		}
+	}
+
+	if ('linkFilters' in raw && typeof raw.linkFilters === 'string') {
+		out.linkFilters = raw.linkFilters;
+	} else {
+		out.linkFilters = '';
 	}
 
 	return out;
