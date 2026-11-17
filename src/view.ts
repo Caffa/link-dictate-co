@@ -18,6 +18,7 @@ import {
 	parentDirOf,
 	parseLinkFilters,
 	targetMatchesFilters,
+	trimFilterFromBasename,
 	type MergedRow,
 } from './display';
 import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
@@ -144,6 +145,7 @@ export class LinkDictateCoView extends ItemView {
 				merged,
 				colorContext,
 				colorCache,
+				filters,
 				usedAliases,
 			);
 			this.sameFolderHasLinks = false;
@@ -157,6 +159,7 @@ export class LinkDictateCoView extends ItemView {
 					.map((target) => ({ target, count: 0, fromCurrent: true })),
 				colorContext,
 				colorCache,
+				filters,
 				usedAliases,
 			);
 
@@ -167,6 +170,7 @@ export class LinkDictateCoView extends ItemView {
 				sameFolderFiltered.map((link) => ({ ...link, fromCurrent: false })),
 				colorContext,
 				colorCache,
+				filters,
 				usedAliases,
 			);
 		}
@@ -184,6 +188,7 @@ export class LinkDictateCoView extends ItemView {
 					.map((link) => ({ ...link, fromCurrent: false })),
 				colorContext,
 				colorCache,
+				filters,
 				usedAliases,
 			);
 		}
@@ -236,6 +241,7 @@ export class LinkDictateCoView extends ItemView {
 		rows: MergedRow[],
 		colorContext: ColorContext | null,
 		colorCache: Map<string, string>,
+		filters: string[],
 		usedAliases: Set<string>,
 	): boolean {
 		section.empty();
@@ -271,12 +277,13 @@ export class LinkDictateCoView extends ItemView {
 				rowEl.addClass('link-dictate-co-from-current');
 			}
 			const base = basenameOfTarget(target);
+			const displayBase = filters.length > 0 ? trimFilterFromBasename(base, filters) : base;
 
 			const main = rowEl.createDiv({ cls: 'link-dictate-co-main' });
 			const wrap = main.createDiv({ cls: 'link-dictate-co-target-wrap' });
 			const targetSpan = wrap.createSpan({
 				cls: 'link-dictate-co-target',
-				text: base,
+				text: displayBase,
 			});
 
 			if (collisions.has(base)) {

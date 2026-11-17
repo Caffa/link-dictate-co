@@ -117,3 +117,24 @@ export function mergeCurrentAndFolderRows(
 
 	return [...currentPart, ...folderOnly];
 }
+
+export function trimFilterFromBasename(basename: string, filters: string[]): string {
+	if (filters.length === 0) return basename;
+	const lower = basename.toLowerCase();
+	let earliest = -1;
+	let matchLen = 0;
+	for (const filter of filters) {
+		const idx = lower.indexOf(filter);
+		if (idx === -1) continue;
+		const take = idx < earliest || (idx === earliest && filter.length > matchLen);
+		if (earliest === -1 || take) {
+			earliest = idx;
+			matchLen = filter.length;
+		}
+	}
+	if (earliest === -1) return basename;
+
+	let remainder = (basename.slice(0, earliest) + basename.slice(earliest + matchLen)).trim();
+	remainder = remainder.replace(/^( - | -|-)\s*/, '');
+	return remainder || basename;
+}

@@ -8,6 +8,7 @@ import {
 	parentDirOf,
 	parseLinkFilters,
 	targetMatchesFilters,
+	trimFilterFromBasename,
 } from '../src/display';
 
 describe('basenameOfTarget', () => {
@@ -213,5 +214,35 @@ describe('mergeCurrentAndFolderRows', () => {
 			{ target: 'A.md', count: 0, fromCurrent: true },
 			{ target: 'B.md', count: 0, fromCurrent: true },
 		]);
+	});
+});
+
+describe('trimFilterFromBasename', () => {
+	it('trims a front match', () => {
+		expect(trimFilterFromBasename('Char - B', ['char - '])).toBe('B');
+	});
+
+	it('trims a mid match', () => {
+		expect(trimFilterFromBasename('Alpha-Beta-Gamma', ['beta-'])).toBe('Alpha-Gamma');
+	});
+
+	it('leaves the basename unchanged when there is no match', () => {
+		expect(trimFilterFromBasename('Note', ['xyz'])).toBe('Note');
+	});
+
+	it('falls back to the full basename when the remainder is empty', () => {
+		expect(trimFilterFromBasename('Chapter - ', ['chapter - '])).toBe('Chapter - ');
+	});
+
+	it('cleans up leading separators left after trimming', () => {
+		expect(trimFilterFromBasename('Char - B', ['char'])).toBe('B');
+	});
+
+	it('leaves the basename unchanged for a path-only filter match', () => {
+		expect(trimFilterFromBasename('B', ['chars/'])).toBe('B');
+	});
+
+	it('picks the longest filter when multiple filters start at the same index', () => {
+		expect(trimFilterFromBasename('FooBarBaz', ['foo', 'foobar'])).toBe('Baz');
 	});
 });
