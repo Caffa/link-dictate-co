@@ -28,6 +28,14 @@ export default class LinkDictateCoPlugin extends Plugin {
 			void this.activateView();
 		});
 
+		this.addCommand({
+			id: 'open-panel',
+			name: 'Open panel',
+			callback: () => {
+				void this.activateView();
+			},
+		});
+
 		this.addSettingTab(new LinkDictateCoSettingTab(this.app, this));
 
 		this.registerEvent(
