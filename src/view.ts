@@ -230,6 +230,7 @@ export class LinkDictateCoView extends ItemView {
 			(settings.showVaultWide ? 1 : 0);
 		const hasLinks =
 			((settings.showCurrentNote || settings.showSameFolder) && this.currentHasLinks) ||
+			(settings.showSameFolder && this.sameFolderHasLinks) ||
 			(settings.showVaultWide && this.vaultHasLinks);
 		this.emptyHintEl.style.display = enabledSections > 0 && !hasLinks ? '' : 'none';
 	}
