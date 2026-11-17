@@ -1,4 +1,5 @@
 import {
+	EventRef,
 	Plugin,
 	WorkspaceLeaf,
 } from 'obsidian';
@@ -9,6 +10,12 @@ import {
 } from './settings-core';
 import { LinkDictateCoSettingTab } from './settings';
 import { LinkDictateCoView, VIEW_TYPE_LINK_DICTATE_CO } from './view';
+
+declare module 'obsidian' {
+	interface Workspace {
+		on(name: 'link-colorer:recolor', callback: () => any, ctx?: any): EventRef;
+	}
+}
 
 const REFRESH_DEBOUNCE_MS = 2000;
 
@@ -49,7 +56,7 @@ export default class LinkDictateCoPlugin extends Plugin {
 		);
 		// README: "Consumers should refresh on the `link-colorer:recolor` workspace event."
 		this.registerEvent(
-			this.app.workspace.on('link-colorer:recolor' as never, () => this.refreshView()),
+			this.app.workspace.on('link-colorer:recolor', () => this.refreshView()),
 		);
 		this.registerEvent(
 			this.app.workspace.on('css-change', () => this.refreshView()),

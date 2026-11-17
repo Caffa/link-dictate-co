@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import {
 	asLinkColorerApi,
+	pickApi,
 	prepareLinkText,
 	safeGetColor,
 	styleForColor,
@@ -88,6 +89,51 @@ describe('asLinkColorerApi', () => {
 		const api = makeApi();
 		delete (api as unknown as Record<string, unknown>).onRecolor;
 		expect(asLinkColorerApi(api)).toBe(api);
+	});
+});
+
+describe('pickApi', () => {
+	it('host api wins over window', () => {
+		const hostApi = makeApi({ getColorForLink: () => '#host' });
+		const windowApi = makeApi({ getColorForLink: () => '#window' });
+		const pluginsRecord = {
+			'link-colorer': { getApi: () => hostApi },
+		};
+		const result = pickApi(pluginsRecord, { linkColorerApi: windowApi });
+		expect(result).toBe(hostApi);
+		expect(result?.getColorForLink('x')).toBe('#host');
+	});
+
+	it('window fallback when host missing', () => {
+		const windowApi = makeApi({ getColorForLink: () => '#window' });
+		const result = pickApi({}, { linkColorerApi: windowApi });
+		expect(result).toBe(windowApi);
+	});
+
+	it('rejects a host api with wrong version', () => {
+		const hostApi = makeApi({ version: 2 });
+		const pluginsRecord = {
+			'link-colorer': { getApi: () => hostApi },
+		};
+		expect(pickApi(pluginsRecord, {})).toBeNull();
+	});
+
+	it('falls back to window when getApi throws', () => {
+		const windowApi = makeApi({ getColorForLink: () => '#window' });
+		const pluginsRecord = {
+			'link-colorer': {
+				getApi: () => {
+					throw new Error('boom');
+				},
+			},
+		};
+		const result = pickApi(pluginsRecord, { linkColorerApi: windowApi });
+		expect(result).toBe(windowApi);
+	});
+
+	it('returns null when both absent', () => {
+		expect(pickApi({}, {})).toBeNull();
+		expect(pickApi(undefined, undefined)).toBeNull();
 	});
 });
 

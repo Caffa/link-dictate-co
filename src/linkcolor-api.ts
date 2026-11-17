@@ -32,6 +32,28 @@ export function asLinkColorerApi(candidate: unknown): LinkColorerApi | null {
 	return api as unknown as LinkColorerApi;
 }
 
+export function pickApi(
+	pluginsRecord: Record<string, unknown> | undefined,
+	win: { linkColorerApi?: unknown } | undefined,
+): LinkColorerApi | null {
+	let candidate: unknown;
+
+	try {
+		const pluginInstance = pluginsRecord?.['link-colorer'] as
+			| { getApi?: () => unknown }
+			| undefined;
+		candidate = pluginInstance?.getApi?.();
+	} catch {
+		// fall through to window fallback
+	}
+
+	if (candidate === undefined || candidate === null) {
+		candidate = win?.linkColorerApi;
+	}
+
+	return asLinkColorerApi(candidate);
+}
+
 export function safeGetColor(api: LinkColorerApi | null, text: string): string | null {
 	if (!api || typeof text !== 'string' || text.trim().length === 0) return null;
 	try {

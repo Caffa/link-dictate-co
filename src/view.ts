@@ -22,7 +22,7 @@ import {
 	type MergedRow,
 } from './display';
 import {
-	asLinkColorerApi,
+	pickApi,
 	prepareLinkText,
 	safeGetColor,
 	styleForColor,
@@ -340,18 +340,11 @@ export class LinkDictateCoView extends ItemView {
 
 	private resolveLinkColorerApi(): LinkColorerApi | null {
 		try {
-			const appPlugins = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins;
-			const pluginInstance = appPlugins?.plugins?.['link-colorer'] as
-				| { getApi?: () => unknown }
-				| undefined;
-			const pluginApi = pluginInstance?.getApi?.();
-			const windowApi = (window as unknown as { linkColorerApi?: unknown }).linkColorerApi;
-			const candidate = pluginApi ?? windowApi ?? null;
-			const api = asLinkColorerApi(candidate);
+			const pluginsRecord = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins
+				?.plugins;
+			const api = pickApi(pluginsRecord, window as unknown as { linkColorerApi?: unknown });
 			if (!api || !api.isReady()) {
-				if (candidate === null || candidate === undefined) {
-					throttledDebugMissingApi();
-				}
+				throttledDebugMissingApi();
 				return null;
 			}
 			return api;
