@@ -17,7 +17,8 @@ discord_channel: https://discord.com/channels/1486966847810043924/15718442636612
 - v0.3.0 + v0.3.1 released after a Discord user request: panel rows show the note basename with the path hidden (faint grey parent-folder suffix only when two targets in the same list share a basename), plus nested frontmatter-alias sub-rows — an alias click always inserts `[[Target|Alias]]`, the main row follows the insert-style setting, so no manual alias map is needed.
 - Link Colorer integration (`src/colorer.ts` + `src/colorer-palettes.ts`) replicates the user's own link-colorer plugin pipeline — djb2 seed hash, prefix strip, least-used palette slot with scoped usage normalization, HSL jitter — reads live instance settings via `getColorUsageStats`, applies inline `--link-color` styles, refreshes on `css-change`, and falls back to the default text color when the plugin is absent.
 - The 0.3.1 fixes were found by a byte-level diff against link-colorer's main.js plus a pipeline simulation over the real vault (three color divergences + the inert-alias bug). Core flow unchanged: row click POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling, per-section toggles and same-folder aggregation from v0.2.x intact.
-- 73 bun tests pass, build/typecheck green; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault.
+- 85 bun tests pass, build/typecheck green; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault.
+- v0.4.0 adds a configurable link filter (comma-separated substrings) applied globally across all three panel sections after ranking; surviving rows still get alias/collision/color treatment.
 - Unverified in Obsidian: the color match against the user's live link-colorer rendering and the panel redesign runtime behavior; Handy Phase-1 API also unverified at runtime; "relevant links" (2-hop) section still future.
 
 ## How to run
@@ -40,6 +41,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-17 — v0.4.0: configurable link filter
+
+Added a user-configurable link filter so only notes whose display name or full path match a comma-separated substring list appear in the panel. Implemented as a new `linkFilters: string` setting (default empty, non-string values coerced to `""`), a "Link filter" text input placed before the Panel sections group, and two pure helpers in `src/display.ts`: `parseLinkFilters` splits/trim/lowercases the raw string, and `targetMatchesFilters` checks the lowercased target basename and full path against the filters. The filter is applied in `src/view.ts` to each section's ranked target list immediately before rendering, so alias rows, collision folder suffixes, and Link Colorer styling only run on surviving rows. Existing per-section "No links available" hints cover fully filtered sections automatically. Tests increased from 73 to 85; `bun test`, `bun run build`, and typecheck green. Released 0.4.0 (https://github.com/Caffa/link-dictate-co/releases/tag/0.4.0) and deployed to Novel-Writing, ZettelPublish, and Journal vaults via `sendToNovelVault.sh`.
+
+Next: runtime-test the filter inside Obsidian with a live vault; verify entering "Char - " hides non-character notes across all three sections while preserving ranking.
+
+https://discord.com/channels/1486966847810043924/1571844263661277194
 
 ### 2026-11-17 — v0.3.1: colorer matches reading view, alias rows always insert alias form
 
