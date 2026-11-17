@@ -1,6 +1,6 @@
 {
 	"name": "link-dictate-co",
-	"version": "0.5.1",
+	"version": "0.6.0",
 	"description": "Click vault links to insert them into Handy voice dictation.",
 	"main": "main.js",
 	"type": "module",
