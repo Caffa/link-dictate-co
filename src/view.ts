@@ -1,6 +1,7 @@
 import {
 	ItemView,
 	Notice,
+	parseFrontMatterAliases,
 	WorkspaceLeaf,
 } from 'obsidian';
 import type LinkDictateCoPlugin from './plugin';
@@ -8,6 +9,8 @@ import { HandyClient } from './handy-client';
 import { requestUrlTransport } from './transport';
 import { currentNoteLinks, frequentLinks, sameFolderLinks, type FrequentLink } from './links';
 import { formatInsertToken } from './token';
+import { basenameOfTarget, groupCollisions, parentDirOf } from './display';
+import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
 
 export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
 
@@ -104,6 +107,8 @@ export class LinkDictateCoView extends ItemView {
 
 		const currentPath = activeFile?.path ?? '';
 		const { settings } = this.plugin;
+		const colorContext = prepareColorContext(this.app);
+		const colorCache = new Map<string, string>();
 
 		this.currentHasLinks = this.renderSection(
 			this.currentSectionEl,
@@ -111,6 +116,9 @@ export class LinkDictateCoView extends ItemView {
 			'Current note',
 			currentNoteLinks(resolved, currentPath),
 			false,
+			[],
+			colorContext,
+			colorCache,
 		);
 
 		const sameFolder =
@@ -124,6 +132,8 @@ export class LinkDictateCoView extends ItemView {
 			sameFolder.map((link) => link.target),
 			true,
 			sameFolder,
+			colorContext,
+			colorCache,
 		);
 
 		if (!currentOnly) {
@@ -137,6 +147,8 @@ export class LinkDictateCoView extends ItemView {
 				frequent.map((link) => link.target),
 				true,
 				frequent,
+				colorContext,
+				colorCache,
 			);
 		}
 
@@ -163,7 +175,9 @@ export class LinkDictateCoView extends ItemView {
 		title: string,
 		targets: string[],
 		showCounts: boolean,
-		counts?: FrequentLink[],
+		counts: FrequentLink[],
+		colorContext: ColorContext | null,
+		colorCache: Map<string, string>,
 	): boolean {
 		section.empty();
 		if (!enabled) {
@@ -186,25 +200,83 @@ export class LinkDictateCoView extends ItemView {
 			return false;
 		}
 
-		for (const target of targets) {
-			const row = list.createDiv({ cls: 'link-dictate-co-row' });
-			row.createSpan({ cls: 'link-dictate-co-target', text: target });
+		const collisions = groupCollisions(targets);
 
-			if (showCounts && counts) {
-				const count = counts.find((c) => c.target === target)?.count ?? 0;
-				row.createSpan({ cls: 'link-dictate-co-count', text: String(count) });
+		for (const target of targets) {
+			const aliases = this.getAliases(target);
+			const firstAlias = aliases[0] ?? null;
+			const row = list.createDiv({ cls: 'link-dictate-co-row' });
+			row.dataset.target = target;
+
+			const main = row.createDiv({ cls: 'link-dictate-co-main' });
+			const wrap = main.createDiv({ cls: 'link-dictate-co-target-wrap' });
+			const targetSpan = wrap.createSpan({
+				cls: 'link-dictate-co-target',
+				text: basenameOfTarget(target),
+			});
+
+			if (collisions.has(basenameOfTarget(target))) {
+				const folder = parentDirOf(target);
+				if (folder) {
+					wrap.createSpan({ cls: 'link-dictate-co-folder', text: folder });
+				}
 			}
 
-			row.addEventListener('click', () => {
-				void this.handleInsert(target);
+			if (showCounts) {
+				const count = counts.find((c) => c.target === target)?.count ?? 0;
+				main.createSpan({ cls: 'link-dictate-co-count', text: String(count) });
+			}
+
+			const color = this.getCachedColor(target, colorContext, colorCache);
+			if (color) {
+				targetSpan.style.cssText = styleForColor(color);
+			}
+
+			main.addEventListener('click', () => {
+				void this.handleInsert(target, firstAlias);
 			});
+
+			for (const alias of aliases) {
+				const aliasRow = row.createDiv({
+					cls: 'link-dictate-co-alias-row',
+					text: alias,
+				});
+				if (color) {
+					aliasRow.style.cssText = styleForColor(color);
+				}
+				aliasRow.addEventListener('click', () => {
+					void this.handleInsert(target, alias);
+				});
+			}
 		}
 
 		return true;
 	}
 
-	private async handleInsert(target: string): Promise<void> {
-		const token = formatInsertToken(target, null, this.plugin.settings.insertStyle);
+	private getAliases(target: string): string[] {
+		const cache = this.app.metadataCache.getCache(target);
+		const raw = cache?.frontmatter ? parseFrontMatterAliases(cache.frontmatter) : null;
+		if (!raw) return [];
+		return Array.isArray(raw) ? raw : [raw];
+	}
+
+	private getCachedColor(
+		target: string,
+		colorContext: ColorContext | null,
+		colorCache: Map<string, string>,
+	): string | null {
+		if (!colorContext) return null;
+		const cached = colorCache.get(target);
+		if (cached !== undefined) return cached;
+		const color = colorForTarget(target, colorContext);
+		if (color) {
+			colorCache.set(target, color);
+		}
+		return color;
+	}
+
+	private async handleInsert(target: string, alias: string | null = null): Promise<void> {
+		const token = formatInsertToken(target, alias, this.plugin.settings.insertStyle);
 		const result = await this.handyClient().insert(token);
 
 		switch (result) {

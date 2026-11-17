@@ -47,8 +47,7 @@ Link Dictate Co panel styles.
 
 .link-dictate-co-row {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
+	flex-direction: column;
 	padding: 0.35rem 0.5rem;
 	border-radius: var(--radius-s);
 	cursor: pointer;
@@ -56,6 +55,25 @@ Link Dictate Co panel styles.
 
 .link-dictate-co-row:hover {
 	background-color: var(--background-modifier-hover);
+}
+
+.link-dictate-co-row:hover .link-dictate-co-alias-row {
+	background-color: transparent;
+}
+
+.link-dictate-co-main {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.link-dictate-co-target-wrap {
+	display: flex;
+	align-items: baseline;
+	gap: 0.35rem;
+	min-width: 0;
+	overflow: hidden;
 }
 
 .link-dictate-co-target {
@@ -66,11 +84,33 @@ Link Dictate Co panel styles.
 	white-space: nowrap;
 }
 
+.link-dictate-co-folder {
+	font-size: 0.78em;
+	opacity: 0.55;
+	margin-left: 0.25rem;
+	white-space: nowrap;
+}
+
 .link-dictate-co-count {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 	flex-shrink: 0;
 	margin-left: 0.5rem;
+}
+
+.link-dictate-co-alias-row {
+	padding-left: 1.5rem;
+	margin-top: 0.15rem;
+	font-size: 0.85em;
+	color: var(--text-muted);
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.link-dictate-co-alias-row:hover {
+	background-color: var(--background-modifier-hover);
 }
 
 .link-dictate-co-empty {

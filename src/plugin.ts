@@ -47,6 +47,9 @@ export default class LinkDictateCoPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => this.refreshView(true)),
 		);
+		this.registerEvent(
+			this.app.workspace.on('css-change', () => this.refreshView()),
+		);
 	}
 
 	onunload(): void {
