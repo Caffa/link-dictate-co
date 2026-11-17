@@ -26,6 +26,7 @@ import {
 	prepareLinkText,
 	safeGetColor,
 	styleForColor,
+	throttledDebugInvalidApi,
 	throttledDebugMissingApi,
 	type LinkColorerApi,
 } from './linkcolor-api';
@@ -339,19 +340,38 @@ export class LinkDictateCoView extends ItemView {
 	}
 
 	private resolveLinkColorerApi(): LinkColorerApi | null {
-		try {
-			const pluginsRecord = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins
-				?.plugins;
-			const api = pickApi(pluginsRecord, window as unknown as { linkColorerApi?: unknown });
-			if (!api || !api.isReady()) {
+		const pluginsRecord = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins
+			?.plugins;
+		const win = window as unknown as { linkColorerApi?: unknown };
+		const api = pickApi(pluginsRecord, win);
+		if (!api) {
+			if (this.hasLinkColorerCandidate(pluginsRecord, win)) {
+				throttledDebugInvalidApi();
+			} else {
 				throttledDebugMissingApi();
-				return null;
 			}
-			return api;
-		} catch {
-			throttledDebugMissingApi();
 			return null;
 		}
+		if (!api.isReady()) {
+			return null;
+		}
+		return api;
+	}
+
+	private hasLinkColorerCandidate(
+		pluginsRecord: Record<string, unknown> | undefined,
+		win: { linkColorerApi?: unknown } | undefined,
+	): boolean {
+		try {
+			const pluginInstance = pluginsRecord?.['link-colorer'] as
+				| { getApi?: () => unknown }
+				| undefined;
+			const pluginApi = pluginInstance?.getApi?.();
+			if (pluginApi !== null && pluginApi !== undefined) return true;
+		} catch {
+			// ignore
+		}
+		return win?.linkColorerApi !== null && win?.linkColorerApi !== undefined;
 	}
 
 	private getCachedColor(

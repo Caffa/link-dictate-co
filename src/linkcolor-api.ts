@@ -21,6 +21,17 @@ export function throttledDebugMissingApi(): void {
 	}
 }
 
+let lastInvalidLog = 0;
+const INVALID_LOG_THROTTLE_MS = 30_000;
+
+export function throttledDebugInvalidApi(): void {
+	const now = Date.now();
+	if (now - lastInvalidLog > INVALID_LOG_THROTTLE_MS) {
+		lastInvalidLog = now;
+		console.debug('link-colorer API candidate rejected; version or shape mismatch');
+	}
+}
+
 export function asLinkColorerApi(candidate: unknown): LinkColorerApi | null {
 	if (!candidate || typeof candidate !== 'object') return null;
 	const api = candidate as Record<string, unknown>;
