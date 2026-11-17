@@ -39,6 +39,21 @@ Link Dictate Co panel styles.
 	background-color: var(--interactive-accent);
 }
 
+.link-dictate-co-sent-links {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	vertical-align: middle;
+	margin-left: 0.5rem;
+}
+
+.sent-link-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background-color: var(--interactive-accent);
+}
+
 .link-dictate-co-list {
 	display: flex;
 	flex-direction: column;

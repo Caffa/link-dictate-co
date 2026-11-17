@@ -40,6 +40,7 @@ export class LinkDictateCoView extends ItemView {
 	plugin: LinkDictateCoPlugin;
 	rootEl: HTMLElement;
 	statusEl: HTMLElement;
+	sentLinksEl: HTMLElement;
 	currentSectionEl: HTMLElement;
 	sameFolderSectionEl: HTMLElement;
 	vaultSectionEl: HTMLElement;
@@ -54,6 +55,7 @@ export class LinkDictateCoView extends ItemView {
 		this.plugin = plugin;
 		this.rootEl = this.contentEl.createDiv({ cls: 'link-dictate-co-container' });
 		this.statusEl = this.rootEl.createDiv({ cls: 'link-dictate-co-status ldc-idle' });
+		this.sentLinksEl = this.rootEl.createDiv({ cls: 'link-dictate-co-sent-links' });
 		this.currentSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 		this.sameFolderSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 		this.vaultSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
@@ -73,6 +75,7 @@ export class LinkDictateCoView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		this.refresh();
+		this.renderSentLinks();
 		this.pollTimer = window.setInterval(() => {
 			void this.pollState();
 		}, POLL_INTERVAL_MS);
@@ -98,6 +101,11 @@ export class LinkDictateCoView extends ItemView {
 		const state = await this.handyClient().state();
 		this.statusEl.removeClasses(['ldc-idle', 'ldc-recording']);
 
+		if (state !== 'recording' && this.plugin.sentLinks.list().length > 0) {
+			this.plugin.sentLinks.clear();
+			this.renderSentLinks();
+		}
+
 		switch (state) {
 			case 'recording':
 				this.statusEl.addClass('ldc-recording');
@@ -114,6 +122,17 @@ export class LinkDictateCoView extends ItemView {
 			default:
 				this.statusEl.addClass('ldc-idle');
 				this.statusEl.setText('Idle');
+		}
+	}
+
+	private renderSentLinks(): void {
+		this.sentLinksEl.empty();
+		const links = this.plugin.sentLinks.list();
+		for (const link of links) {
+			this.sentLinksEl.createSpan({
+				cls: 'sent-link-dot',
+				title: link.token,
+			});
 		}
 	}
 
@@ -395,6 +414,9 @@ export class LinkDictateCoView extends ItemView {
 
 		switch (result) {
 			case 'ok':
+				this.plugin.sentLinks.add(token);
+				this.renderSentLinks();
+				this.plugin.editorFocus.refocus();
 				break;
 			case 'not_recording':
 				new Notice("Handy isn't recording");

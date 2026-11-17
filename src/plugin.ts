@@ -10,6 +10,8 @@ import {
 } from './settings-core';
 import { LinkDictateCoSettingTab } from './settings';
 import { LinkDictateCoView, VIEW_TYPE_LINK_DICTATE_CO } from './view';
+import { EditorFocusTracker } from './editor-focus';
+import { SentLinksTracker } from './sent-links';
 
 declare module 'obsidian' {
 	interface Workspace {
@@ -21,6 +23,8 @@ const REFRESH_DEBOUNCE_MS = 2000;
 
 export default class LinkDictateCoPlugin extends Plugin {
 	settings: LinkDictateCoSettings = { ...DEFAULT_SETTINGS };
+	editorFocus = new EditorFocusTracker();
+	sentLinks = new SentLinksTracker();
 	private refreshTimer?: number;
 
 	async onload(): Promise<void> {
@@ -53,6 +57,9 @@ export default class LinkDictateCoPlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => this.refreshView(true)),
+		);
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', (leaf) => this.editorFocus.tryTrack(leaf)),
 		);
 		// README: "Consumers should refresh on the `link-colorer:recolor` workspace event."
 		this.registerEvent(
