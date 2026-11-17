@@ -21,7 +21,14 @@ import {
 	trimFilterFromBasename,
 	type MergedRow,
 } from './display';
-import { colorForTarget, prepareColorContext, styleForColor, type ColorContext } from './colorer';
+import {
+	asLinkColorerApi,
+	prepareLinkText,
+	safeGetColor,
+	styleForColor,
+	throttledDebugMissingApi,
+	type LinkColorerApi,
+} from './linkcolor-api';
 
 export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
 
@@ -118,7 +125,7 @@ export class LinkDictateCoView extends ItemView {
 
 		const currentPath = activeFile?.path ?? '';
 		const { settings } = this.plugin;
-		const colorContext = prepareColorContext(this.app);
+		const api = this.resolveLinkColorerApi();
 		const colorCache = new Map<string, string>();
 		const filters = parseLinkFilters(settings.linkFilters);
 		const usedAliases = this.gatherUsedAliases(currentPath, resolved);
@@ -143,7 +150,7 @@ export class LinkDictateCoView extends ItemView {
 				true,
 				'Current note & folder',
 				merged,
-				colorContext,
+				api,
 				colorCache,
 				filters,
 				usedAliases,
@@ -157,7 +164,7 @@ export class LinkDictateCoView extends ItemView {
 				currentNoteLinks(resolved, currentPath)
 					.filter((target) => targetMatchesFilters(target, filters))
 					.map((target) => ({ target, count: 0, fromCurrent: true })),
-				colorContext,
+				api,
 				colorCache,
 				filters,
 				usedAliases,
@@ -168,7 +175,7 @@ export class LinkDictateCoView extends ItemView {
 				settings.showSameFolder,
 				'Same folder',
 				sameFolderFiltered.map((link) => ({ ...link, fromCurrent: false })),
-				colorContext,
+				api,
 				colorCache,
 				filters,
 				usedAliases,
@@ -186,7 +193,7 @@ export class LinkDictateCoView extends ItemView {
 				frequent
 					.filter((link) => targetMatchesFilters(link.target, filters))
 					.map((link) => ({ ...link, fromCurrent: false })),
-				colorContext,
+				api,
 				colorCache,
 				filters,
 				usedAliases,
@@ -240,7 +247,7 @@ export class LinkDictateCoView extends ItemView {
 		enabled: boolean,
 		title: string,
 		rows: MergedRow[],
-		colorContext: ColorContext | null,
+		api: LinkColorerApi | null,
 		colorCache: Map<string, string>,
 		filters: string[],
 		usedAliases: Set<string>,
@@ -298,7 +305,7 @@ export class LinkDictateCoView extends ItemView {
 				main.createSpan({ cls: 'link-dictate-co-count', text: String(count) });
 			}
 
-			const color = this.getCachedColor(target, colorContext, colorCache);
+			const color = this.getCachedColor(target, api, colorCache);
 			if (color) {
 				targetSpan.style.cssText = styleForColor(color);
 			}
@@ -331,15 +338,38 @@ export class LinkDictateCoView extends ItemView {
 		return filterAliases(raw, target, used);
 	}
 
+	private resolveLinkColorerApi(): LinkColorerApi | null {
+		try {
+			const appPlugins = (this.app as unknown as { plugins?: { plugins?: Record<string, unknown> } }).plugins;
+			const pluginInstance = appPlugins?.plugins?.['link-colorer'] as
+				| { getApi?: () => unknown }
+				| undefined;
+			const pluginApi = pluginInstance?.getApi?.();
+			const windowApi = (window as unknown as { linkColorerApi?: unknown }).linkColorerApi;
+			const candidate = pluginApi ?? windowApi ?? null;
+			const api = asLinkColorerApi(candidate);
+			if (!api || !api.isReady()) {
+				if (candidate === null || candidate === undefined) {
+					throttledDebugMissingApi();
+				}
+				return null;
+			}
+			return api;
+		} catch {
+			throttledDebugMissingApi();
+			return null;
+		}
+	}
+
 	private getCachedColor(
 		target: string,
-		colorContext: ColorContext | null,
+		api: LinkColorerApi | null,
 		colorCache: Map<string, string>,
 	): string | null {
-		if (!colorContext) return null;
+		if (!api) return null;
 		const cached = colorCache.get(target);
 		if (cached !== undefined) return cached;
-		const color = colorForTarget(target, colorContext);
+		const color = safeGetColor(api, prepareLinkText(target));
 		if (color) {
 			colorCache.set(target, color);
 		}

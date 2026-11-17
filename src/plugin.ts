@@ -47,6 +47,10 @@ export default class LinkDictateCoPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => this.refreshView(true)),
 		);
+		// README: "Consumers should refresh on the `link-colorer:recolor` workspace event."
+		this.registerEvent(
+			this.app.workspace.on('link-colorer:recolor' as never, () => this.refreshView()),
+		);
 		this.registerEvent(
 			this.app.workspace.on('css-change', () => this.refreshView()),
 		);
