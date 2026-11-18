@@ -43,6 +43,14 @@ bun run test
 
 ## Log
 
+### 2026-11-18 — v0.6.2: first-click fix + pending queue
+
+v0.6.2 ships two fixes from live Handy logs. First-click bug: clicking from the editor into the panel made the panel leaf active, Obsidian fired `active-leaf-change`, and the handler rebuilt the row DOM synchronously so the browser never fired the click event. New pure `src/refresh-guard.ts` exports `shouldRefreshForLeafChange`, and `src/plugin.ts` now skips `refreshView(true)` when the newly-active leaf is the plugin's own view, so editor-to-panel clicks register. Pending queue: Handy's POST `/insert` returns 409 `not_recording` when clicked while Handy is idle; the token was dropped with only a transient notice. New pure `src/pending-links.ts` tracker (cap 5, drops oldest) queues the token, `view.ts` renders amber pending dots, and `pollState()` drains the queue once Handy reports `recording`, moving successful inserts into the green sent-link dots; unauthorized and buffer-full responses drop with the existing notices, while error/not_recording leave the token to retry next poll. Pruning expires entries after 60 s. Both trackers are unit-tested; all bun tests pass with `bun run build` green.
+
+Next: user runtime-verify — start Handy idle, click a link (amber dot appears), start Handy recording, confirm the queued link is inserted and turns green; also verify editor-to-panel clicks work on the first try.
+
+https://discord.com/channels/1486966847810043924/1572311227974025228
+
 ### 2026-11-17 — v0.6.1: editor refocus + sent-link dots
 
 v0.6.1 shipped two fixes from a live debugging session: live Handy logs proved that clicking a panel row moved keyboard focus to the sidebar, so Handy pasted the mid-recording transcription into a sidebar row and it was lost (a 26-char dictation + 45-char token showed up in a sidebar row, flagged by AX paste-verify). New `src/editor-focus.ts` is a duck-typed tracker that registers the last active markdown view via the `active-leaf-change` event, and `handleInsert` refocuses that editor only on a successful insert. Sent-link dots: a new pure `src/sent-links.ts` tracker (cap 6, drops oldest) records one token per accept, renders a green dot per token Handy accepted during the current recording next to the status pill (hover title = the token text), clears when state polling reports not-recording, and re-renders on panel reopen so mid-recording state survives; both trackers are unit-tested, 121 bun tests total with tsc + esbuild green. Analytic and deep reviews passed (deep verdict SHIP, no required changes; non-blocking nits: second panel leaf repaints on poll only, and clear fires on network-blip statuses too). Released 0.6.1 (e2d6284, https://github.com/Caffa/link-dictate-co/releases/tag/0.6.1), deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`.
