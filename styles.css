@@ -47,11 +47,26 @@ Link Dictate Co panel styles.
 	margin-left: 0.5rem;
 }
 
+.link-dictate-co-pending-links {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	vertical-align: middle;
+	margin-left: 0.5rem;
+}
+
 .sent-link-dot {
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
 	background-color: var(--interactive-accent);
+}
+
+.pending-link-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background-color: var(--text-warning);
 }
 
 .link-dictate-co-list {

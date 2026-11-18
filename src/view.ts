@@ -30,8 +30,7 @@ import {
 	throttledDebugMissingApi,
 	type LinkColorerApi,
 } from './linkcolor-api';
-
-export const VIEW_TYPE_LINK_DICTATE_CO = 'link-dictate-co';
+import { VIEW_TYPE_LINK_DICTATE_CO } from './refresh-guard';
 
 const VAULT_LINK_LIMIT = 25;
 const POLL_INTERVAL_MS = 2000;
@@ -41,6 +40,7 @@ export class LinkDictateCoView extends ItemView {
 	rootEl: HTMLElement;
 	statusEl: HTMLElement;
 	sentLinksEl: HTMLElement;
+	pendingLinksEl: HTMLElement;
 	currentSectionEl: HTMLElement;
 	sameFolderSectionEl: HTMLElement;
 	vaultSectionEl: HTMLElement;
@@ -56,6 +56,7 @@ export class LinkDictateCoView extends ItemView {
 		this.rootEl = this.contentEl.createDiv({ cls: 'link-dictate-co-container' });
 		this.statusEl = this.rootEl.createDiv({ cls: 'link-dictate-co-status ldc-idle' });
 		this.sentLinksEl = this.rootEl.createDiv({ cls: 'link-dictate-co-sent-links' });
+		this.pendingLinksEl = this.rootEl.createDiv({ cls: 'link-dictate-co-pending-links' });
 		this.currentSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 		this.sameFolderSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
 		this.vaultSectionEl = this.rootEl.createDiv({ cls: 'link-dictate-co-section' });
@@ -76,6 +77,7 @@ export class LinkDictateCoView extends ItemView {
 	async onOpen(): Promise<void> {
 		this.refresh();
 		this.renderSentLinks();
+		this.renderPendingLinks();
 		this.pollTimer = window.setInterval(() => {
 			void this.pollState();
 		}, POLL_INTERVAL_MS);
@@ -123,6 +125,10 @@ export class LinkDictateCoView extends ItemView {
 				this.statusEl.addClass('ldc-idle');
 				this.statusEl.setText('Idle');
 		}
+
+		await this.plugin.drainPendingLinks();
+		this.renderSentLinks();
+		this.renderPendingLinks();
 	}
 
 	private renderSentLinks(): void {
@@ -131,6 +137,17 @@ export class LinkDictateCoView extends ItemView {
 		for (const link of links) {
 			this.sentLinksEl.createSpan({
 				cls: 'sent-link-dot',
+				title: link.token,
+			});
+		}
+	}
+
+	private renderPendingLinks(): void {
+		this.pendingLinksEl.empty();
+		const links = this.plugin.pendingLinks.list();
+		for (const link of links) {
+			this.pendingLinksEl.createSpan({
+				cls: 'pending-link-dot',
 				title: link.token,
 			});
 		}
@@ -419,17 +436,17 @@ export class LinkDictateCoView extends ItemView {
 				this.plugin.editorFocus.refocus();
 				break;
 			case 'not_recording':
-				new Notice("Handy isn't recording");
+				this.plugin.pendingLinks.add(token);
+				this.renderPendingLinks();
+				new Notice('Link queued — inserts when Handy starts recording');
 				break;
 			case 'unauthorized':
-				new Notice('Handy rejected the secret');
-				break;
 			case 'buffer_full':
-				new Notice("Handy's token buffer is full");
-				break;
 			case 'error':
+				this.plugin.showHandyNotice(result);
+				break;
 			default:
-				new Notice('Handy unreachable');
+				this.plugin.showHandyNotice('error');
 				break;
 		}
 	}
