@@ -8,17 +8,18 @@ Blueprint conventions:
 title: Link Dictate Co
 one_liner: Obsidian sidebar plugin that inserts vault links into the Handy voice dictation app over a loopback HTTP API.
 status: active
-updated: 2026-11-18
+updated: 2026-11-20
 discord_channel: https://discord.com/channels/1486966847810043924/1571844263661277194
 ---
 
 ## Where it stands
 
+- Two post-0.6.2 fixes on main (9a9bcf9, a97a241), not yet released as a version: inserted wikilinks are now basename-only without `.md` (`[[Char - Si Lian|Si Lian]]`), keeping the full path only when the basename collides vault-wide — new pure `insertTargetFor` helper in `src/display.ts`, wired in `view.ts` `handleInsert` so plain and alias insert styles both use it; and row inserts fire on `pointerdown` with a left-button guard instead of `click`, so rows rebuilt between press and release can't swallow the insert (same mid-click DOM-rebuild class as 0.6.2's first-click bug). Deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`.
 - v0.6.2 fixes two live-diagnosed bugs. First click after dictating did nothing: activating the panel leaf fired `active-leaf-change` and the handler rebuilt the row DOM mid-click, so the browser never fired the click event — new `src/refresh-guard.ts` (`shouldRefreshForLeafChange`) plus a skip in `src/plugin.ts` means the plugin's own view activating no longer forces a refresh, so editor-to-panel clicks land. Clicking a row while Handy is idle got 409 `not_recording` and the token was dropped: new pure `src/pending-links.ts` queue (cap 5, 60 s TTL) holds it, `view.ts` renders amber pending dots, and a plugin-level single-flight FIFO drain inserts queued tokens when state polling reports recording (retry on error; drop on unauthorized/buffer-full). 0.6.1's editor refocus (`src/editor-focus.ts`) and green sent-link dots (`src/sent-links.ts`, cap 6, cleared when recording stops) remain.
 - Side finding from the same live logs: the ZettelPublish and Journal vaults ran the default plugin config (port 48213, empty secret) while Handy listens on 48212 with a token, so those two vaults could never have inserted anything — fixed by writing `data.json` (port 48212 + the Handy token) into both vaults directly (vault config, outside the repo).
 - Panel colors come from Link Colorer 2.1.0's official public plugin API via `src/linkcolor-api.ts` (0.6.0 replaced the 809-line reverse-engineered replica `colorer.ts`/`colorer-palettes.ts`): `pickApi` resolves `getApi()` / `window.linkColorerApi` guarded on `version === 1` + `isReady`, `getColorForLink` is called per panel refresh so colors exactly match already-rendered links by contract, and the API is re-resolved every refresh so lazy-load stays resilient; refresh triggers remain the host's `link-colorer:recolor` workspace event plus Obsidian's `css-change`.
-- The 0.5.x panel UX is intact: merged current-note + same-folder section when both toggles are on (`fromCurrent` priority), alias display mode `all` | `used` (default `used`), clickable alias hover styling, and filter-trimmed display names (`trimFilterFromBasename`). Core flow unchanged: row click POSTs `{"text":"[[Target]]"}` with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling; per-section toggles, same-folder aggregation (v0.2.x), basename display with collision suffixes (v0.3.x), and the v0.4.0 link filter (applied after ranking, before alias/collision/color treatment) all intact.
-- 137 bun tests pass (refresh-guard + pending-links included), tsc + esbuild green; analytic review passed, deep review verdict SHIP. Released 0.6.2 (52df7b3 + ffe21bb, tag 0.6.2 pushed, release workflow triggered) and deployed the same main.js build (hash d8edb672) to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault. Unverified in Obsidian so far: the 0.6.2 fixes end-to-end (first click mid-recording inserts immediately with refocus; idle-click amber dot → green on recording start), and previous sessions' runtime verifications (0.6.1 refocus/dots, 0.6.0 live color contract, 0.5.x UI) still rest on their own sessions' testing; "relevant links" (2-hop) section still future.
+- The 0.5.x panel UX is intact: merged current-note + same-folder section when both toggles are on (`fromCurrent` priority), alias display mode `all` | `used` (default `used`), clickable alias hover styling, and filter-trimmed display names (`trimFilterFromBasename`). Core flow unchanged: row pointerdown POSTs the wikilink token (basename form per `insertTargetFor`) with Bearer auth to `127.0.0.1:<port>/insert`, `/state` polled ~2 s for idle/recording styling; per-section toggles, same-folder aggregation (v0.2.x), basename display with collision suffixes (v0.3.x), and the v0.4.0 link filter (applied after ranking, before alias/collision/color treatment) all intact.
+- 142 bun tests pass (refresh-guard + pending-links included), tsc + esbuild green; analytic review passed, deep review verdict SHIP. Released 0.6.2 (52df7b3 + ffe21bb, tag 0.6.2 pushed, release workflow triggered); the vaults now run the post-0.6.2 build redeployed 2026-11-20 via `sendToNovelVault.sh`; vault-wide top-25 aggregation still 6–12 ms on the 13k-file Novel-Writing vault. Unverified in Obsidian so far: the two post-0.6.2 fixes (basename-only wikilinks resolve around duplicate basenames; pointerdown inserts land first-press mid-recording), the 0.6.2 fixes end-to-end (first click mid-recording inserts immediately with refocus; idle-click amber dot → green on recording start), and previous sessions' runtime verifications (0.6.1 refocus/dots, 0.6.0 live color contract, 0.5.x UI) still rest on their own sessions' testing; "relevant links" (2-hop) section still future.
 
 ## How to run
 
@@ -36,7 +37,7 @@ bun run test
 - `src/handy-client.ts` is transport-agnostic (injected `Transport`) so tests never touch the real Handy app.
 - `src/transport.ts` wires Obsidian's `requestUrl` for the production transport.
 - `src/links.ts`, `src/token.ts`, and `src/settings-core.ts` are pure helpers with full test coverage.
-- `src/display.ts` holds basename/collision/alias row helpers; `src/linkcolor-api.ts` wraps the official Link Colorer public API (`pickApi` selector) for panel colors.
+- `src/display.ts` holds basename/collision/alias row helpers plus `insertTargetFor` for the inserted wikilink format (basename-only, full path only on vault-wide collision); `src/linkcolor-api.ts` wraps the official Link Colorer public API (`pickApi` selector) for panel colors.
 - `src/editor-focus.ts` duck-types and remembers the last active markdown editor leaf (via `active-leaf-change`) so `handleInsert` can refocus it after a successful insert.
 - `src/sent-links.ts` is a pure sent-link dot tracker (cap 6) for tokens Handy accepted during the current recording; `view.ts` renders the dots next to the status pill.
 - `src/refresh-guard.ts` decides when an `active-leaf-change` should refresh the panel; `src/plugin.ts` skips the refresh when the newly-active leaf is the plugin's own view, so editor-to-panel clicks aren't swallowed by a mid-click DOM rebuild.
@@ -44,6 +45,14 @@ bun run test
 - `src/settings.ts` provides the Obsidian `SettingTab` UI.
 
 ## Log
+
+### 2026-11-20 — basename-only wikilinks + pointerdown inserts
+
+Two fixes committed and pushed to main after the 0.6.2 release (9a9bcf9, a97a241). Inserted wikilinks are now basename-only without `.md` — `[[Char - Si Lian|Si Lian]]` instead of a full-path target — with the full path kept only when the basename collides vault-wide: a new pure `insertTargetFor` helper in `src/display.ts` computes it from the live vault file list inside `view.ts` `handleInsert`, so plain and alias insert styles both use it. Panel rows now fire the insert on `pointerdown` with a left-button guard instead of `click`, fixing inserts lost when a row is rebuilt between press and release (the same mid-click DOM-rebuild class as 0.6.2's first-click bug). 142 bun tests pass, typecheck clean; deployed to Novel-Writing, ZettelPublish, and Journal via `sendToNovelVault.sh`.
+
+Next: runtime-verify in Obsidian — inserted links resolve in a vault with duplicate basenames, and a mid-recording insert lands on the first press.
+
+https://discord.com/channels/1486966847810043924/1573013045746204704
 
 ### 2026-11-18 — v0.6.2: first-click fix + pending queue + vault config fix
 
