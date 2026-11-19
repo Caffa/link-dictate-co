@@ -14,6 +14,7 @@ import {
 	extractUsedAliases,
 	filterAliases,
 	groupCollisions,
+	insertTargetFor,
 	mergeCurrentAndFolderRows,
 	parentDirOf,
 	parseLinkFilters,
@@ -426,7 +427,13 @@ export class LinkDictateCoView extends ItemView {
 	}
 
 	private async handleInsert(target: string, alias: string | null = null, forceAlias = false): Promise<void> {
-		const token = formatInsertToken(target, alias, this.plugin.settings.insertStyle, forceAlias);
+		const collisions = groupCollisions(this.app.vault.getFiles().map((f) => f.path));
+		const token = formatInsertToken(
+			insertTargetFor(target, collisions),
+			alias,
+			this.plugin.settings.insertStyle,
+			forceAlias,
+		);
 		const result = await this.handyClient().insert(token);
 
 		switch (result) {

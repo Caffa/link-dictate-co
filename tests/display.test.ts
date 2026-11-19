@@ -4,6 +4,7 @@ import {
 	extractUsedAliases,
 	filterAliases,
 	groupCollisions,
+	insertTargetFor,
 	mergeCurrentAndFolderRows,
 	parentDirOf,
 	parseLinkFilters,
@@ -69,6 +70,30 @@ describe('groupCollisions', () => {
 	it('uses exact basename match, not lowercase', () => {
 		const paths = ['Folder/Foo.md', 'Folder/foo.md'];
 		expect(groupCollisions(paths)).toEqual(new Set());
+	});
+});
+
+describe('insertTargetFor', () => {
+	it('returns basename only when there is no collision', () => {
+		expect(insertTargetFor('World Building/Char - Si Lian.md', new Set())).toBe('Char - Si Lian');
+	});
+
+	it('keeps the full path (without .md) when the basename collides vault-wide', () => {
+		expect(insertTargetFor('World Building/Char - Si Lian.md', new Set(['Char - Si Lian']))).toBe(
+			'World Building/Char - Si Lian',
+		);
+	});
+
+	it('strips .md from root-level targets on collision', () => {
+		expect(insertTargetFor('Note.md', new Set(['Note']))).toBe('Note');
+	});
+
+	it('keeps the extension for non-md targets without collision', () => {
+		expect(insertTargetFor('Assets/img.png', new Set())).toBe('img.png');
+	});
+
+	it('keeps the full path for non-md targets on collision', () => {
+		expect(insertTargetFor('Assets/img.png', new Set(['img.png']))).toBe('Assets/img.png');
 	});
 });
 

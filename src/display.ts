@@ -83,6 +83,12 @@ export function groupCollisions(paths: string[]): Set<string> {
 	return collisions;
 }
 
+export function insertTargetFor(target: string, collisions: Set<string>): string {
+	const base = basenameOfTarget(target);
+	if (!collisions.has(base)) return base;
+	return target.endsWith('.md') ? target.slice(0, -3) : target;
+}
+
 export interface MergedRow {
 	target: string;
 	count: number;
