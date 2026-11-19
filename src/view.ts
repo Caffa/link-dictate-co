@@ -348,7 +348,8 @@ export class LinkDictateCoView extends ItemView {
 				targetSpan.style.cssText = styleForColor(color);
 			}
 
-			main.addEventListener('click', () => {
+			main.addEventListener('pointerdown', (ev) => {
+				if (ev.button !== 0) return;
 				void this.handleInsert(target, firstAlias);
 			});
 
@@ -360,7 +361,8 @@ export class LinkDictateCoView extends ItemView {
 				if (color) {
 					aliasRow.style.cssText = styleForColor(color);
 				}
-				aliasRow.addEventListener('click', () => {
+				aliasRow.addEventListener('pointerdown', (ev) => {
+					if (ev.button !== 0) return;
 					void this.handleInsert(target, alias, true);
 				});
 			}
