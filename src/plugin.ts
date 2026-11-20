@@ -145,6 +145,8 @@ export default class LinkDictateCoPlugin extends Plugin {
 
 			const pending = this.pendingLinks.list();
 			for (const link of pending) {
+				// Refocus before each insert so drained tokens land in the editor.
+				this.editorFocus.refocus();
 				const result = await this.handyClient().insert(link.token);
 				switch (result) {
 					case 'ok':

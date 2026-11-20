@@ -436,13 +436,16 @@ export class LinkDictateCoView extends ItemView {
 			this.plugin.settings.insertStyle,
 			forceAlias,
 		);
+		// Refocus before inserting so Handy's injected keystrokes land in the editor,
+		// not this panel. The boolean is safe to ignore: proceed with the insert even
+		// if no editor was ever tracked.
+		this.plugin.editorFocus.refocus();
 		const result = await this.handyClient().insert(token);
 
 		switch (result) {
 			case 'ok':
 				this.plugin.sentLinks.add(token);
 				this.renderSentLinks();
-				this.plugin.editorFocus.refocus();
 				break;
 			case 'not_recording':
 				this.plugin.pendingLinks.add(token);
